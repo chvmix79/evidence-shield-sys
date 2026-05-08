@@ -1,0 +1,199 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── RISK & EVIDENCE MANAGER — DESIGN SYSTEM ─────────────────────────────── */
+
+@layer base {
+  :root {
+    /* Brand palette — deep navy + amber accent */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Deep navy primary */
+    --primary: 222 65% 22%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Slate secondary */
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 222 47% 18%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Amber accent */
+    --accent: 38 92% 50%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 74% 52%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 222 65% 22%;
+
+    --radius: 0.625rem;
+
+    /* Sidebar */
+    --sidebar-background: 222 50% 16%;
+    --sidebar-foreground: 210 40% 88%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 222 40% 22%;
+    --sidebar-accent-foreground: 210 40% 95%;
+    --sidebar-border: 222 40% 22%;
+    --sidebar-ring: 38 92% 50%;
+
+    /* Risk level semantic tokens */
+    --risk-low: 142 72% 40%;
+    --risk-low-bg: 142 60% 95%;
+    --risk-medium: 38 92% 45%;
+    --risk-medium-bg: 38 100% 95%;
+    --risk-high: 25 95% 50%;
+    --risk-high-bg: 25 100% 95%;
+    --risk-critical: 0 74% 52%;
+    --risk-critical-bg: 0 86% 97%;
+
+    /* Status tokens */
+    --status-pending: 215 16% 47%;
+    --status-pending-bg: 215 14% 94%;
+    --status-progress: 222 65% 45%;
+    --status-progress-bg: 222 80% 95%;
+    --status-completed: 142 72% 40%;
+    --status-completed-bg: 142 60% 95%;
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 10%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 38 92% 50%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 222 40% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 222 40% 16%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 40% 18%;
+    --input: 222 40% 18%;
+    --ring: 38 92% 50%;
+    --sidebar-background: 222 55% 9%;
+    --sidebar-foreground: 210 40% 88%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 222 40% 14%;
+    --sidebar-accent-foreground: 210 40% 95%;
+    --sidebar-border: 222 40% 14%;
+    --sidebar-ring: 38 92% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+/* ─── CUSTOM UTILITIES ─────────────────────────────────────────────────────── */
+@layer utilities {
+  .risk-badge-low {
+    background-color: hsl(var(--risk-low-bg));
+    color: hsl(var(--risk-low));
+    border: 1px solid hsl(var(--risk-low) / 0.25);
+  }
+  .risk-badge-medium {
+    background-color: hsl(var(--risk-medium-bg));
+    color: hsl(var(--risk-medium));
+    border: 1px solid hsl(var(--risk-medium) / 0.3);
+  }
+  .risk-badge-high {
+    background-color: hsl(var(--risk-high-bg));
+    color: hsl(var(--risk-high));
+    border: 1px solid hsl(var(--risk-high) / 0.3);
+  }
+  .risk-badge-critical {
+    background-color: hsl(var(--risk-critical-bg));
+    color: hsl(var(--risk-critical));
+    border: 1px solid hsl(var(--risk-critical) / 0.3);
+  }
+
+  .status-badge-pending {
+    background-color: hsl(var(--status-pending-bg));
+    color: hsl(var(--status-pending));
+  }
+  .status-badge-progress {
+    background-color: hsl(var(--status-progress-bg));
+    color: hsl(var(--status-progress));
+  }
+  .status-badge-completed {
+    background-color: hsl(var(--status-completed-bg));
+    color: hsl(var(--status-completed));
+  }
+
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150;
+    color: hsl(var(--sidebar-foreground));
+  }
+  .sidebar-nav-item:hover {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+  .sidebar-nav-item.active {
+    background-color: hsl(var(--sidebar-primary) / 0.15);
+    color: hsl(var(--sidebar-primary));
+    border-left: 2px solid hsl(var(--sidebar-primary));
+  }
+
+  .card-hover {
+    @apply transition-all duration-200;
+    box-shadow: 0 1px 3px hsl(222 47% 11% / 0.06), 0 1px 2px hsl(222 47% 11% / 0.04);
+  }
+  .card-hover:hover {
+    box-shadow: 0 4px 16px hsl(222 47% 11% / 0.1), 0 2px 6px hsl(222 47% 11% / 0.06);
+    transform: translateY(-1px);
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}

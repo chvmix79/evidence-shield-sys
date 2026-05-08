@@ -1,0 +1,57 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables - NEVER commit .env files
+.env
+.env.*
+!.env.example
+
+# Binaries and System files
+nul
+*.exe
+*.zip
+*.lockb
+*.lock
+bun
+bun_temp/
+supabase_temp/
+coverage/
+dist/
+
+# Utility Scripts with sensitive keys
+fix_profiles.ps1
+fix_roles.ps1
+restore_rls.js
+restore_public_rls.js
+riesgos_keys.txt
+test-key.js
+test-key.cjs
+apply-fix.js
+production_upgrade.sql
+complete_checklists_seed.sql
+dump.sql
+supa_out.txt
+*.backup
+*.new
