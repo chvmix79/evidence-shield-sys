@@ -40,6 +40,10 @@ supabase_temp/
 coverage/
 dist/
 
+# Playwright test artifacts
+playwright-report/
+test-results/
+
 # Utility Scripts with sensitive keys
 fix_profiles.ps1
 fix_roles.ps1
