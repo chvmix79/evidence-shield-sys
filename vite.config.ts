@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: "hidden",
+    // Aumentamos el límite a 1 MB para chunks grandes inevitables (exceljs ~1.2 MB)
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         // Content hash based cache busting (standard approach)
@@ -41,7 +43,7 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: "assets/[name]-[hash].[ext]",
         // Manual chunk splitting for optimal caching and load times
         manualChunks(id) {
-          // Vendor: React ecosystem
+          // Vendor: React ecosystem (primero para evitar overlap con vendor-other)
           if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/") || id.includes("node_modules/react-router/") || id.includes("node_modules/scheduler/")) {
             return "vendor-react";
           }
@@ -49,13 +51,21 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("node_modules/recharts/") || id.includes("node_modules/d3-") || id.includes("node_modules/victory-")) {
             return "vendor-charts";
           }
-          // Vendor: Export libraries (xlsx ~283 KB, jspdf+html2canvas ~460 KB)
-          if (id.includes("node_modules/exceljs/") || id.includes("node_modules/jspdf/") || id.includes("node_modules/html2canvas/") || id.includes("node_modules/jspdf-autotable/")) {
-            return "vendor-export";
+          // Vendor: ExcelJS (1.2 MB — el más pesado, va solo)
+          if (id.includes("node_modules/exceljs/")) {
+            return "vendor-excel";
+          }
+          // Vendor: PDF export (jspdf + html2canvas)
+          if (id.includes("node_modules/jspdf/") || id.includes("node_modules/html2canvas/") || id.includes("node_modules/jspdf-autotable/")) {
+            return "vendor-pdf";
           }
           // Vendor: Date utilities (date-fns locale is ~151 KB)
           if (id.includes("node_modules/date-fns/") || id.includes("node_modules/luxon/") || id.includes("node_modules/dayjs/")) {
             return "vendor-dates";
+          }
+          // Vendor: Sentry error tracking
+          if (id.includes("node_modules/@sentry/")) {
+            return "vendor-sentry";
           }
           // Vendor: Supabase
           if (id.includes("node_modules/@supabase/")) {
