@@ -12,6 +12,7 @@ import { Webhook, Plus, Save, Trash2, CheckCircle2, Activity } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
+import type { WebhookRecord } from "@/types";
 import { safeCacheClear } from "@/lib/safeCacheClear";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 
@@ -39,7 +40,7 @@ export default function WebhooksPage() {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      const result = (data as any[]) || [];
+      const result = (data ?? []) as WebhookRecord[];
       
       // Cache persistence
       localStorage.setItem("webhooks_cache", JSON.stringify(result));
@@ -79,7 +80,6 @@ export default function WebhooksPage() {
       return;
     }
     
-    // @ts-ignore
     const { error } = await supabase.from("webhooks").insert({
       url: newUrl,
       events: selectedEvents,
@@ -98,14 +98,12 @@ export default function WebhooksPage() {
   };
 
   const toggleStatus = async (id: string, current: boolean) => {
-    // @ts-ignore
     await supabase.from("webhooks").update({ active: !current }).eq("id", id);
     fetchWebhooks();
   };
 
   const confirmDelete = async () => {
     if (!deleteDialog) return;
-    // @ts-ignore
     await supabase.from("webhooks").delete().eq("id", deleteDialog);
     setDeleteDialog(null);
     fetchWebhooks();

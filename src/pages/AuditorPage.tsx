@@ -7,13 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useCompany } from "@/contexts/CompanyContext";
-import { Loader2, AlertTriangle, FileText, Shield, ClipboardCheck, Play } from "lucide-react";
+import { Loader2, AlertTriangle, FileText, Shield, ClipboardCheck, Play, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, User, Info, FileSearch } from "lucide-react";
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
+import { useToast } from "@/hooks/use-toast";
+import type { AuditSession } from "@/types";
 
 const RISK_COLORS = ["#22c55e", "#f59e0b", "#f97316", "#ef4444"];
 
@@ -21,6 +23,7 @@ export default function AuditorPage() {
   const { user, role, plan } = useAuth();
   const { selectedCompanyId } = useCompany();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const isProfessional = plan?.id === '41465153-4d90-41a3-a4af-66e4777e5738' || plan?.id === '6a8803e7-ea12-4e31-9270-b660cf6de8d1';
   const isSuperAdmin = role === 'superadmin' || user?.email === 'chvmix79@gmail.com';
@@ -29,7 +32,7 @@ export default function AuditorPage() {
   const { data: qData, isLoading, refetch } = useQuery({
     queryKey: ["auditor-data", selectedCompanyId],
     queryFn: async () => {
-      if (!selectedCompanyId) return { risks: [], actions: [], evidences: [] };
+      if (!selectedCompanyId) return { risks: [], actions: [], evidences: [], auditSessions: [] };
 
       // Consultar riesgos
       const { data: rData } = await supabase
@@ -39,29 +42,33 @@ export default function AuditorPage() {
         .order("risk_level", { ascending: false });
 
       const r = rData || [];
-      const riskIds = r.map((x: any) => x.id);
+      const riskIds = r.map((x: { id: string }) => x.id);
 
       // Consultar acciones y evidencias en paralelo
-      const [aRes, eRes] = await Promise.all([
+      const [aRes, eRes, asRes] = await Promise.all([
         riskIds.length > 0 
           ? supabase.from("actions").select("id, description, responsible, due_date, status, risk_id, risks(name)").in("risk_id", riskIds)
           : Promise.resolve({ data: [] }),
         riskIds.length > 0
           ? supabase.from("evidences").select("id, name, file_type, created_at, risk_id").in("risk_id", riskIds)
-          : Promise.resolve({ data: [] })
+          : Promise.resolve({ data: [] }),
+        supabase.from("audit_sessions").select("id, status, score, created_at, completed_at, audit_checklists(name)").eq("company_id", selectedCompanyId).order("created_at", { ascending: false })
       ]);
 
       return {
         risks: r,
         actions: aRes.data || [],
-        evidences: eRes.data || []
+        evidences: eRes.data || [],
+        auditSessions: asRes.data || []
       };
     },
     enabled: canAccess && !!selectedCompanyId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
 
-  const [selectedItem, setSelectedItem] = useState<{ type: 'risk' | 'action', data: any } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ type: 'risk' | 'action', data: Record<string, unknown> } | null>(null);
   const [updating, setUpdating] = useState(false);
 
   const handleUpdateActionStatus = async (actionId: string, newStatus: string) => {
@@ -72,8 +79,9 @@ export default function AuditorPage() {
       toast({ title: "Estado actualizado", description: `La acción ahora está en estado: ${newStatus}` });
       setSelectedItem(null);
       refetch();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const error = e as Error;
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setUpdating(false);
     }
@@ -82,6 +90,7 @@ export default function AuditorPage() {
   const risks = qData?.risks || [];
   const actions = qData?.actions || [];
   const evidences = qData?.evidences || [];
+  const auditSessions = qData?.auditSessions || [];
 
   const byLevel = [
     { name: "Bajo", value: risks.filter(r => (r.risk_level || 0) <= 4).length },
@@ -149,10 +158,11 @@ export default function AuditorPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{risks.length}</div><p className="text-sm text-muted-foreground">Riesgos</p></CardContent></Card>
         <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{actions.length}</div><p className="text-sm text-muted-foreground">Acciones</p></CardContent></Card>
         <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{evidences.length}</div><p className="text-sm text-muted-foreground">Evidencias</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="text-2xl font-bold">{auditSessions.length}</div><p className="text-sm text-muted-foreground">Auditorías</p></CardContent></Card>
         <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-red-600">{risks.filter(r => (r.risk_level || 0) >= 17).length}</div><p className="text-sm text-muted-foreground">Críticos</p></CardContent></Card>
       </div>
 
@@ -160,6 +170,7 @@ export default function AuditorPage() {
         <TabsList>
           <TabsTrigger value="risks">Riesgos</TabsTrigger>
           <TabsTrigger value="actions">Acciones</TabsTrigger>
+          <TabsTrigger value="audits">Auditorías</TabsTrigger>
         </TabsList>
         
         <TabsContent value="risks" className="mt-4">
@@ -213,6 +224,45 @@ export default function AuditorPage() {
                     </div>
                   </div>
                   <StatusBadge status={a.status} />
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="audits" className="mt-4">
+          {auditSessions.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground border rounded-xl border-dashed">No hay auditorías registradas</div>
+          ) : (
+            <div className="grid gap-3">
+              {auditSessions.map((session: AuditSession) => (
+                <div key={session.id} className="bg-card rounded-xl border p-4 flex flex-col md:flex-row md:items-center justify-between hover:border-primary/50 transition-all hover:shadow-md group gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100">
+                      <ClipboardCheck className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">{session.audit_checklists?.name || "Lista de Chequeo"}</h3>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>{session.created_at ? new Date(session.created_at).toLocaleDateString() : 'Sin fecha'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 self-end md:self-auto">
+                    <div className="text-right">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Cumplimiento</p>
+                      <p className={`font-black ${session.score >= 80 ? 'text-green-600' : session.score >= 50 ? 'text-orange-600' : 'text-red-600'}`}>
+                        {session.score ? session.score.toFixed(1) + '%' : '0%'}
+                      </p>
+                    </div>
+                    <Badge variant={session.status === 'completed' ? 'default' : 'secondary'}>
+                      {session.status === 'completed' ? 'Completada' : 'En Progreso'}
+                    </Badge>
+                    {session.status !== 'completed' && (
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/audit-execution?session=${session.id}`)}>Continuar</Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

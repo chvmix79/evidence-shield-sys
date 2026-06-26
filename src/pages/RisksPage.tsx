@@ -10,16 +10,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, AlertTriangle, Shield, Pencil, Trash2, FileText, CheckCircle2, Building2, Download, Sparkles, RefreshCw } from "lucide-react";
+import { Plus, Search, AlertTriangle, Shield, Pencil, Trash2, FileText, CheckCircle2, Building2, Download, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { exportToExcel } from "@/lib/export";
 import { RiskPredictionDashboard } from "@/components/ai/RiskPredictionDashboard";
+import { RiskAssessmentWizard } from "@/components/RiskAssessmentWizard";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { safeCacheClear } from "@/lib/safeCacheClear";
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
+import { logger } from "@/lib/logger";
+import type { RiskTemplate, StandardRecord, RiskFormData } from "@/types";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -34,25 +36,13 @@ type Risk = {
   standards?: { name: string; code: string } | null;
 };
 
-type RiskTemplate = {
-  id: string; name: string; description: string | null;
-  type: 'operational' | 'legal' | 'financial' | 'security';
-  probability: number | null; impact: number | null;
-  recommended_actions: string | null;
-  sector_id: string;
-};
-
-type Standard = {
-  id: string; name: string; code: string; description: string | null;
-  is_mandatory: boolean | null;
-};
-
 export default function RisksPage() {
   const { user, role } = useAuth();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editRisk, setEditRisk] = useState<Risk | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -133,10 +123,14 @@ export default function RisksPage() {
 
   });
 
-  const risks = data?.r?.map((risk: any) => ({
+  const risks = (data?.r || []).map((risk) => ({
     ...risk,
-    standards: risk.standard_id ? (data.standardsMap instanceof Map ? data.standardsMap.get(risk.standard_id) : (data.standardsMap as any)[risk.standard_id]) : null
-  })) || [];
+    standards: risk.standard_id
+      ? (data.standardsMap instanceof Map
+        ? data.standardsMap.get(risk.standard_id) as { name: string; code: string } | undefined
+        : null)
+      : null
+  }));
 
   const templates = data?.t || [];
   const fetchError = error ? (error instanceof Error ? error.message : "Error al cargar la información") : null;
@@ -150,7 +144,7 @@ export default function RisksPage() {
     setIsActionLoading(true);
     try {
       await WITH_TIMEOUT((async () => {
-        const risksToInsert = templates.map((t: any) => ({
+        const risksToInsert = templates.map((t: RiskTemplate) => ({
           company_id: selectedCompanyId,
           name: t.name,
           description: t.description,
@@ -170,9 +164,10 @@ export default function RisksPage() {
         description: `Se han cargado ${templates.length} riesgos basados en la inteligencia artificial de tu sector.` 
       });
       fetchData();
-    } catch (err: any) {
-      console.error(err);
-      toast({ title: "Error al importar", description: err.message, variant: "destructive" });
+    } catch (err) {
+      const error = err as Error;
+      logger.error(error);
+      toast({ title: "Error al importar", description: error.message, variant: "destructive" });
     } finally {
       setIsActionLoading(false);
     }
@@ -232,11 +227,11 @@ export default function RisksPage() {
       status: form.status, company_id: selectedCompanyId, owner_id: user.id,
     };
     if (editRisk) {
-      const { error } = await supabase.from("risks").update(payload as any).eq("id", editRisk.id);
+      const { error } = await supabase.from("risks").update(payload).eq("id", editRisk.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Riesgo actualizado" });
     } else {
-      const { error } = await supabase.from("risks").insert(payload as any);
+      const { error } = await supabase.from("risks").insert(payload);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Riesgo creado" });
     }
@@ -266,7 +261,7 @@ export default function RisksPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const dataToExport = risks.map(r => ({
       "ID Riesgo": r.id,
       "Nombre": r.name,
@@ -278,7 +273,7 @@ export default function RisksPage() {
       "Estado": r.status === "active" ? "Activo" : "Mitigado",
       "Fecha Creación": r.created_at
     }));
-    exportToExcel(dataToExport, "Riesgos", "Riesgos");
+    await exportToExcel(dataToExport, "Riesgos", "Riesgos");
   };
 
   const filtered = risks.filter(r => (r.name || "").toLowerCase().includes(search.toLowerCase()));
@@ -369,8 +364,8 @@ export default function RisksPage() {
             </p>
             <div className="flex flex-col gap-3">
               {templates.length > 0 && (
-                <Button onClick={handleSeedFromTemplates} className="gap-2 bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 font-bold">
-                  <Sparkles className="w-4 h-4" /> Importar {templates.length} Riesgos del Sector
+                <Button onClick={() => setWizardOpen(true)} className="gap-2 bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 font-bold">
+                  <Sparkles className="w-4 h-4" /> Asistente de Identificación
                 </Button>
               )}
               <Button onClick={openCreate} variant="outline" className="gap-2">
@@ -618,6 +613,14 @@ export default function RisksPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RiskAssessmentWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        sectorId={contextCompanies.find(c => c.id === selectedCompanyId)?.sector_id || null}
+        companyId={selectedCompanyId}
+        onSuccess={() => fetchData()}
+      />
 
       <ConfirmDialog
         open={deleteDialog.open}

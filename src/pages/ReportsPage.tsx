@@ -13,6 +13,7 @@ import autoTable from "jspdf-autotable";
 import { useQuery } from "@tanstack/react-query";
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
 import { safeCacheClear } from "@/lib/safeCacheClear";
+import { logger } from "@/lib/logger";
 
 type Risk = {
   id: string; name: string; type: string; risk_level: number; status: string; description: string | null;
@@ -65,7 +66,7 @@ export default function ReportsPage() {
 
         const result = {
           risks: (r || []) as Risk[],
-          actions: (a || []).map(action => ({ ...action, risks: { name: (action as any).risks?.name || "—" } })) as Action[],
+          actions: (a || []).map(action => ({ ...action, risks: { name: (action as { risks?: { name?: string } }).risks?.name || "—" } })) as Action[],
           evidences: (e || []) as Evidence[],
           lastAudit: s && s[0] ? s[0] : null
         };
@@ -73,7 +74,7 @@ export default function ReportsPage() {
         // Persistencia para reportes (puede ser pesado, limitamos a 500 registros en cache)
         try {
           localStorage.setItem(`reports_cache_${selectedCompanyId || 'global'}`, JSON.stringify(result));
-        } catch (err) { console.warn("Cache of reports too large for localStorage"); }
+        } catch (err) { logger.warn("Cache of reports too large for localStorage"); }
         
         return result;
       })(), 15000, "La generación del reporte está tardando demasiado.");
@@ -175,7 +176,7 @@ export default function ReportsPage() {
         styles: { fontSize: 8 },
       });
 
-      let currentY = (doc as any).lastAutoTable.finalY + 15;
+      let currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
 
       if (currentY > 250) {
         doc.addPage();
@@ -214,7 +215,7 @@ export default function ReportsPage() {
 
       toast({ title: "Reporte PDF descargado" });
     } catch (err) {
-      console.error("Error generating PDF:", err);
+      logger.error("Error generating PDF:", err);
       toast({ title: "Error al generar PDF", description: String(err) });
     } finally {
       setExporting(false);
@@ -226,7 +227,7 @@ export default function ReportsPage() {
     : 0;
 
   // Use byType to avoid warning if needed, though hidden for now
-  console.debug("Riesgos por tipo:", byType.length);
+  logger.debug("Riesgos por tipo:", byType.length);
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
@@ -332,7 +333,7 @@ export default function ReportsPage() {
                     </td>
                     <td className="px-4 py-3"><TypeBadge type={r.type} /></td>
                     <td className="px-4 py-3"><RiskLevelBadge level={r.risk_level} /></td>
-                    <td className="px-4 py-3"><StatusBadge status={r.status as any} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -364,7 +365,7 @@ export default function ReportsPage() {
                   <td className="px-4 py-3 text-muted-foreground text-xs">{a.risks?.name ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{a.responsible}</td>
                   <td className="px-4 py-3 text-muted-foreground tabular-nums text-xs">{a.due_date ? format(new Date(a.due_date), "d/M/yyyy") : "—"}</td>
-                  <td className="px-4 py-3"><StatusBadge status={a.status as any} /></td>
+                  <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
                 </tr>
               ))}
             </tbody>

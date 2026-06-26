@@ -1,6 +1,18 @@
+import { logger } from "@/lib/logger";
+
+declare global {
+  interface Window {
+    __QUERY_CLIENT__?: {
+      clear(): void;
+      invalidateQueries: (opts: { queryKey: string[] }) => void;
+      resetQueries: (opts: { queryKey: string[]; exact: boolean }) => void;
+    };
+  }
+}
+
 export function safeCacheClear() {
   try {
-    console.log("[Cache] Iniciando limpieza segura...");
+    logger.debug("[Cache] Iniciando limpieza segura...");
     const preservePrefixes = ['sb-']; // Supabase
     const preserveKeys = ['selected_company_id', 'page-has-been-forced-refreshed'];
     
@@ -10,16 +22,16 @@ export function safeCacheClear() {
     });
     
     sessionStorage.clear();
-    console.log("[Cache] Limpieza segura completada.");
+    logger.debug("[Cache] Limpieza segura completada.");
   } catch (e) {
-    console.error("[Cache] Error en safeCacheClear:", e);
+    logger.error("[Cache] Error en safeCacheClear:", e);
   }
 }
 
 export function hardCacheClear() {
   try {
-    console.warn("[Cache] Ejecutando limpieza profunda...");
-    const qc = (window as any).__QUERY_CLIENT__;
+    logger.warn("[Cache] Ejecutando limpieza profunda...");
+    const qc = window.__QUERY_CLIENT__;
     if (qc) {
       qc.clear();
     }
@@ -36,20 +48,22 @@ export function hardCacheClear() {
       if (d.v) localStorage.setItem(d.k, d.v);
     });
     
-    console.log("[Cache] Limpieza profunda completada (Sesión preservada).");
+    logger.debug("[Cache] Limpieza profunda completada (Sesión preservada).");
   } catch (e) {
-    console.error("[Cache] Error en hardCacheClear:", e);
+    logger.error("[Cache] Error en hardCacheClear:", e);
   }
 }
 
 export function moduleCacheClear(moduleName?: string) {
   try {
-    const qc = (window as any).__QUERY_CLIENT__;
+    const qc = window.__QUERY_CLIENT__;
     if (qc && moduleName) {
-      console.log("[Cache] Limpiando datos del módulo: " + moduleName);
+      logger.debug("[Cache] Limpiando datos del módulo: " + moduleName);
       // Cancelamos y reseteamos para forzar refetch
       qc.invalidateQueries({ queryKey: [moduleName] });
       qc.resetQueries({ queryKey: [moduleName], exact: false });
     }
-  } catch (e) {}
+  } catch (e) {
+    logger.error("[Cache] Error en moduleCacheClear:", e);
+  }
 }

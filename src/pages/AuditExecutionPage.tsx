@@ -7,21 +7,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, XCircle, AlertCircle, Save, ArrowLeft, Loader2, ClipboardList } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import type { AuditChecklist, AuditChecklistItem, AuditSession, AuditResponse } from "@/types";
 
 export default function AuditExecutionPage() {
   const { user } = useAuth();
   const { selectedCompanyId, companies } = useCompany();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const resumeSessionId = searchParams.get("session");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [checklist, setChecklist] = useState<any>(null);
-  const [items, setItems] = useState<any[]>([]);
+  const [checklist, setChecklist] = useState<AuditChecklist | null>(null);
+  const [items, setItems] = useState<AuditChecklistItem[]>([]);
   const [responses, setResponses] = useState<Record<string, { response: string, observations: string }>>({});
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<AuditSession | null>(null);
 
   const currentCompany = companies.find(c => c.id === selectedCompanyId);
 
@@ -31,18 +34,85 @@ export default function AuditExecutionPage() {
       return;
     }
 
-    const fetchChecklist = async () => {
+    const init = async () => {
       setLoading(true);
       try {
-        // 1. Buscar checklist para el sector de la empresa
-        const { data: clData, error: clErr } = await supabase
-          .from("audit_checklists")
-          .select("*")
-          .eq("sector_id", currentCompany?.sector_id)
-          .eq("is_active", true)
-          .maybeSingle();
+        // =============================================
+        // CASO A: RETOMAR sesión existente
+        // =============================================
+        if (resumeSessionId) {
+          // 1. Cargar la sesión
+          const { data: existingSession } = await supabase
+            .from("audit_sessions")
+            .select("*, audit_checklists(*)")
+            .eq("id", resumeSessionId)
+            .single();
 
-        if (clErr || !clData) {
+          if (!existingSession) {
+            toast({ title: "Sesión no encontrada", variant: "destructive" });
+            navigate("/auditor");
+            return;
+          }
+
+          setSession(existingSession);
+          setChecklist(existingSession.audit_checklists);
+
+          // 2. Cargar items del checklist
+          const { data: iData } = await supabase
+            .from("audit_checklist_items")
+            .select("*")
+            .eq("checklist_id", existingSession.checklist_id)
+            .order("order_index", { ascending: true });
+          setItems(iData || []);
+
+          // 3. Cargar respuestas previas
+          const { data: prevResponses } = await supabase
+            .from("audit_responses")
+            .select("*")
+            .eq("session_id", resumeSessionId);
+
+          if (prevResponses && prevResponses.length > 0) {
+            const loaded: Record<string, { response: string, observations: string }> = {};
+            prevResponses.forEach((r: AuditResponse) => {
+              if (!r.item_id) return;
+              loaded[r.item_id] = { response: r.response || '', observations: r.observations || '' };
+            });
+            setResponses(loaded);
+          }
+
+          setLoading(false);
+          return;
+        }
+
+        // =============================================
+        // CASO B: NUEVA auditoría
+        // =============================================
+        
+        // 1. Buscar checklist para el sector de la empresa
+        let clData = null;
+
+        if (currentCompany?.sector_id) {
+          const res = await supabase
+            .from("audit_checklists")
+            .select("*")
+            .eq("sector_id", currentCompany.sector_id)
+            .eq("is_active", true)
+            .maybeSingle();
+          clData = res.data;
+        }
+
+        // Fallback: cualquier lista activa
+        if (!clData) {
+          const { data: fallbackData } = await supabase
+            .from("audit_checklists")
+            .select("*")
+            .eq("is_active", true)
+            .limit(1)
+            .maybeSingle();
+          clData = fallbackData;
+        }
+
+        if (!clData) {
           toast({ title: "Sin lista de chequeo", description: "No hay una lista de auditoría configurada para este sector.", variant: "destructive" });
           setLoading(false);
           return;
@@ -59,7 +129,7 @@ export default function AuditExecutionPage() {
 
         setItems(iData || []);
 
-        // 3. Crear sesión de auditoría si no existe
+        // 3. Crear nueva sesión de auditoría
         const { data: sData } = await supabase
           .from("audit_sessions")
           .insert({
@@ -79,8 +149,8 @@ export default function AuditExecutionPage() {
       }
     };
 
-    fetchChecklist();
-  }, [selectedCompanyId, currentCompany?.sector_id]);
+    init();
+  }, [selectedCompanyId, currentCompany?.sector_id, resumeSessionId]);
 
   const handleResponse = (itemId: string, value: string) => {
     setResponses(prev => ({

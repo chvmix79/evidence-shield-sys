@@ -99,6 +99,163 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_checklists: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          sector_id: string | null
+          is_active: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          sector_id?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          sector_id?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_checklists_sector_id_fkey"
+            columns: ["sector_id"]
+            referencedRelation: "sectors"
+            referencedSchema: "public"
+          }
+        ]
+      }
+      audit_checklist_items: {
+        Row: {
+          id: string
+          checklist_id: string | null
+          category: string
+          question: string
+          requirement_code: string | null
+          order_index: number | null
+        }
+        Insert: {
+          id?: string
+          checklist_id?: string | null
+          category: string
+          question: string
+          requirement_code?: string | null
+          order_index?: number | null
+        }
+        Update: {
+          id?: string
+          checklist_id?: string | null
+          category?: string
+          question?: string
+          requirement_code?: string | null
+          order_index?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            referencedRelation: "audit_checklists"
+            referencedSchema: "public"
+          }
+        ]
+      }
+      audit_responses: {
+        Row: {
+          id: string
+          session_id: string | null
+          item_id: string | null
+          response: string | null
+          observations: string | null
+          evidence_url: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id?: string | null
+          item_id?: string | null
+          response?: string | null
+          observations?: string | null
+          evidence_url?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string | null
+          item_id?: string | null
+          response?: string | null
+          observations?: string | null
+          evidence_url?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_responses_session_id_fkey"
+            columns: ["session_id"]
+            referencedRelation: "audit_sessions"
+            referencedSchema: "public"
+          },
+          {
+            foreignKeyName: "audit_responses_item_id_fkey"
+            columns: ["item_id"]
+            referencedRelation: "audit_checklist_items"
+            referencedSchema: "public"
+          }
+        ]
+      }
+      audit_sessions: {
+        Row: {
+          id: string
+          company_id: string | null
+          checklist_id: string | null
+          auditor_id: string | null
+          status: string | null
+          score: number | null
+          created_at: string | null
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          company_id?: string | null
+          checklist_id?: string | null
+          auditor_id?: string | null
+          status?: string | null
+          score?: number | null
+          created_at?: string | null
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          company_id?: string | null
+          checklist_id?: string | null
+          auditor_id?: string | null
+          status?: string | null
+          score?: number | null
+          created_at?: string | null
+          completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_sessions_company_id_fkey"
+            columns: ["company_id"]
+            referencedRelation: "companies"
+            referencedSchema: "public"
+          },
+          {
+            foreignKeyName: "audit_sessions_checklist_id_fkey"
+            columns: ["checklist_id"]
+            referencedRelation: "audit_checklists"
+            referencedSchema: "public"
+          }
+        ]
+      }
       audits: {
         Row: {
           auditor_id: string | null

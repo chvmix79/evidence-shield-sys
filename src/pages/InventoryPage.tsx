@@ -1,18 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, ShieldAlert, Loader2, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Shield, ShieldAlert, Loader2, RefreshCw, PlusCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
+import { RiskAssessmentWizard } from "@/components/RiskAssessmentWizard";
+
+const IT_SECTOR_ID = "997b984c-ef68-41c7-a23e-b7dfae403a84";
 
 export default function InventoryPage() {
   const { user } = useAuth();
   const { selectedCompanyId, companies } = useCompany();
   const currentCompany = companies?.find(c => c.id === selectedCompanyId);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   const { data: qData, isLoading, error, refetch } = useQuery({
     queryKey: ["inventory", selectedCompanyId],
@@ -20,7 +24,7 @@ export default function InventoryPage() {
       if (!selectedCompanyId) return { risks: [] };
 
       return await WITH_TIMEOUT((async () => {
-        const { data: rData, error: rErr } = await (supabase as any)
+        const { data: rData, error: rErr } = await supabase
           .from("risks")
           .select("id, name, description, type, probability, impact, risk_level, status, created_at")
           .eq("company_id", selectedCompanyId)
@@ -71,20 +75,26 @@ export default function InventoryPage() {
             Ciberseguridad
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Inventario de riesgos de seguridad para {currentCompany?.name}
+            Gestión y evaluación de riesgos informáticos y ciberseguridad para {currentCompany?.name}.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Actualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+          <Button size="sm" onClick={() => setIsWizardOpen(true)} className="gap-2">
+            <PlusCircle className="w-4 h-4" />
+            Evaluar Ciberseguridad
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{risks.length}</div>
-            <p className="text-sm text-muted-foreground">Total Riesgos</p>
+            <p className="text-sm text-muted-foreground">Total Riesgos IT</p>
           </CardContent>
         </Card>
         <Card className="border-red-200 bg-red-50">
@@ -102,7 +112,7 @@ export default function InventoryPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">{risks.length - criticalRisks - highRisks}</div>
-            <p className="text-sm text-muted-foreground">Menores</p>
+            <p className="text-sm text-muted-foreground">Menores / Controlados</p>
           </CardContent>
         </Card>
       </div>
@@ -110,7 +120,14 @@ export default function InventoryPage() {
       {risks.length === 0 ? (
         <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed">
           <ShieldAlert className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
-          <p className="text-muted-foreground">No hay riesgos de seguridad registrados</p>
+          <p className="text-muted-foreground font-medium">No se han evaluado riesgos de ciberseguridad</p>
+          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+            Todas las empresas, independientemente de su sector principal, están expuestas a riesgos cibernéticos (como ransomware o fugas de datos).
+          </p>
+          <Button onClick={() => setIsWizardOpen(true)} className="mt-6 gap-2" variant="default">
+            <PlusCircle className="w-4 h-4" />
+            Iniciar Evaluación Cibernética
+          </Button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -128,6 +145,16 @@ export default function InventoryPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {selectedCompanyId && (
+        <RiskAssessmentWizard
+          open={isWizardOpen}
+          onOpenChange={setIsWizardOpen}
+          sectorId={IT_SECTOR_ID}
+          companyId={selectedCompanyId}
+          onSuccess={() => refetch()}
+        />
       )}
     </div>
   );

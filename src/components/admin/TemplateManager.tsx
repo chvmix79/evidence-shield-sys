@@ -154,7 +154,7 @@ export function TemplateManager() {
 
   const deleteItem = async (table: string, id: string, queryKey: string) => {
     if (!confirm("¿Seguro de eliminar este item?")) return;
-    const { error } = await supabase.from(table as any).delete().eq("id", id);
+    const { error } = await supabase.from(table as "standards" | "risk_templates" | "software_templates").delete().eq("id", id);
     if (error) toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
     else {
       toast({ title: "Eliminado correctamente" });

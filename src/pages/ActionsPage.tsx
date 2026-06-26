@@ -18,11 +18,19 @@ import { format, isPast, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { exportToExcel } from "@/lib/export";
-
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
+import type { ActionRecord as TypedAction } from "@/types";
 
-type ActionRecord = Record<string, any>;
-type Risk = { id: string; name: string | null; risk_level: number | null };
+interface Risk {
+  id: string;
+  name: string | null;
+  risk_level: number | null;
+}
+
+interface ActionsQueryResult {
+  actions: TypedAction[];
+  risksMap: Record<string, Risk>;
+}
 
 const ITEMS_PER_PAGE = 15;
 
@@ -50,10 +58,10 @@ export default function ActionsPage() {
     queryKey: ["risks-for-actions", selectedCompanyId],
     queryFn: async (): Promise<Risk[]> => {
       if (!selectedCompanyId) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("risks")
         .select("id, name, risk_level")
-        .eq("company_id", selectedCompanyId)
+        .eq("company_id", selectedCompanyId as string)
         .order("name", { ascending: true });
       
       if (error) throw error;
@@ -69,10 +77,10 @@ export default function ActionsPage() {
       if (!selectedCompanyId) return { actions: [], risksMap: {} };
 
       return await WITH_TIMEOUT((async () => {
-        const risksRes = await (supabase as any)
+        const risksRes = await supabase
           .from("risks")
           .select("id, name, risk_level")
-          .eq("company_id", selectedCompanyId);
+          .eq("company_id", selectedCompanyId as string);
         
         if (risksRes.error) throw risksRes.error;
 
@@ -83,7 +91,7 @@ export default function ActionsPage() {
 
         const riskIds = Object.keys(risksMap);
         
-        let actionsQuery = (supabase as any)
+        let actionsQuery = supabase
           .from("actions")
           .select("*")
           .order("created_at", { ascending: false });
@@ -95,7 +103,7 @@ export default function ActionsPage() {
         const { data: actions, error: actionsError } = await actionsQuery;
         if (actionsError) throw actionsError;
         
-        return { actions: (actions ?? []) as ActionRecord[], risksMap };
+        return { actions: (actions ?? []) as TypedAction[], risksMap };
       })(), 30000, { actions: [], risksMap: {} });
     },
     enabled: !!selectedCompanyId,
@@ -106,14 +114,14 @@ export default function ActionsPage() {
 
 
 
-  const actions = actionsData?.actions ?? [];
+  const actions = (actionsData?.actions ?? []) as TypedAction[];
   const risksMap = actionsData?.risksMap ?? {};
   const risks = risksData ?? [];
 
-  const getDescription = (a: ActionRecord): string | null => a.description ?? a.descripcion ?? null;
-  const getStatus = (a: ActionRecord): string => a.status ?? a.estado ?? "pending";
-  const getResponsible = (a: ActionRecord): string | null => a.responsible ?? a.responsable ?? null;
-  const getDueDate = (a: ActionRecord): string | null => a.due_date ?? a.fecha_limite ?? null;
+  const getDescription = (a: TypedAction): string | null => a.description ?? a.descripcion ?? null;
+  const getStatus = (a: TypedAction): string => a.status ?? a.estado ?? "pending";
+  const getResponsible = (a: TypedAction): string | null => a.responsible ?? a.responsable ?? null;
+  const getDueDate = (a: TypedAction): string | null => a.due_date ?? a.fecha_limite ?? null;
 
   const openCreate = () => {
     setEditAction(null);
@@ -127,7 +135,7 @@ export default function ActionsPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = (a: ActionRecord) => {
+  const openEdit = (a: TypedAction) => {
     setEditAction(a);
     const dueDate = getDueDate(a);
     setForm({ 
@@ -155,7 +163,8 @@ export default function ActionsPage() {
       return;
     }
     
-    const payload: any = { 
+    const payload: TypedAction = { 
+      id: editAction?.id ?? '',
       description: form.description, 
       responsible: form.responsible, 
       status: form.status,
@@ -167,7 +176,7 @@ export default function ActionsPage() {
     }
     
     if (editAction) {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("actions")
         .update(payload)
         .eq("id", editAction.id);
@@ -178,10 +187,11 @@ export default function ActionsPage() {
       }
       toast({ title: "Acción actualizada" });
     } else {
-      payload.owner_id = user.id;
-      const { error } = await (supabase as any)
+      const { id: _, ...insertData } = payload;
+      const insertPayload = { ...insertData, owner_id: user.id };
+      const { error } = await supabase
         .from("actions")
-        .insert([payload]);
+        .insert([insertPayload]);
       
       if (error) { 
         toast({ title: "Error", description: error.message, variant: "destructive" }); 
@@ -195,12 +205,12 @@ export default function ActionsPage() {
 
   const confirmDelete = async () => {
     if (!deleteDialog.id) return;
-    await (supabase as any).from("actions").delete().eq("id", deleteDialog.id);
+    await supabase.from("actions").delete().eq("id", deleteDialog.id);
     setDeleteDialog({ open: false, id: null });
     fetchData();
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const dataToExport = actions.map(a => {
       const risk = a.risk_id ? risksMap[a.risk_id] : null;
       const dueDate = getDueDate(a);
@@ -213,10 +223,10 @@ export default function ActionsPage() {
         "Estado": getStatus(a) === "pending" ? "Pendiente" : getStatus(a) === "in_progress" ? "En Proceso" : getStatus(a) === "completed" ? "Completado" : getStatus(a),
       };
     });
-    exportToExcel(dataToExport, "Plan_Accion", "Acciones");
+    await exportToExcel(dataToExport, "Plan_Accion", "Acciones");
   };
 
-  const isOverdue = (a: ActionRecord) => {
+  const isOverdue = (a: TypedAction) => {
     const dueDate = getDueDate(a);
     return dueDate && getStatus(a) !== "completed" && isPast(parseISO(dueDate));
   };
@@ -334,10 +344,10 @@ export default function ActionsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {paginatedActions.map(a => {
-                  const risk = a.risk_id ? risksMap[a.risk_id] : null;
-                  const dueDate = getDueDate(a);
-                  return (
-                    <tr key={a.id} className={`hover:bg-muted/30 transition-colors ${isOverdue(a) ? "bg-red-50/50 dark:bg-red-900/10" : ""}`}>
+      const risk: Risk | undefined = a.risk_id ? risksMap[a.risk_id] : undefined;
+      const dueDate = getDueDate(a);
+      return (
+        <tr key={a.id} className={`hover:bg-muted/30 transition-colors ${isOverdue(a) ? "bg-red-50/50 dark:bg-red-900/10" : ""}`}>
                       <td className="px-4 py-3">
                         <div className="font-medium text-foreground">{getDescription(a) ?? "—"}</div>
                       </td>

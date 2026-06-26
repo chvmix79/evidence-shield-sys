@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import { logger } from "@/lib/logger";
 
-interface Company {
+export interface Company {
   id: string;
   name: string | null;
   sector_id?: string | null;
@@ -47,17 +48,19 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     return [];
   });
   const [loading, setLoading] = useState(false);
+  const fetchingRef = useRef(false);
 
   const fetchCompanies = useCallback(async () => {
-    if (loading) return;
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     setLoading(true);
 
     try {
-      console.log("[CompanyContext] Buscando empresas...");
+      logger.debug("[CompanyContext] Buscando empresas...");
       const { data, error } = await supabase.from("companies").select("id, name, sector_id");
 
       if (error) {
-        console.error("Error fetching companies:", error);
+        logger.error("Error fetching companies:", error);
       } else {
         const list = data || [];
         setCompanies(list);
@@ -74,11 +77,12 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (err) {
-      console.error("Critical error in fetchCompanies:", err);
+      logger.error("Critical error in fetchCompanies:", err);
     } finally {
+      fetchingRef.current = false;
       setLoading(false);
     }
-  }, [selectedCompanyId, loading]);
+  }, [selectedCompanyId]);
 
 
   const { user, loading: authLoading } = useAuth();

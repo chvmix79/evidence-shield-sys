@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -9,12 +9,21 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
+import type { AlertRecord, AlertType } from "@/types";
 
-type AlertRecord = Record<string, any>;
+interface AlertConfig {
+  icon: React.ComponentType<{ className?: string }>;
+  className: string;
+  label: string;
+}
 
-const alertConfig: Record<string, { icon: any; className: string; label: string }> = {
+const alertConfig: Record<string, AlertConfig> = {
   overdue_action: { icon: Clock, className: "risk-badge-high", label: "Acción Vencida" },
   critical_risk: { icon: AlertTriangle, className: "risk-badge-critical", label: "Riesgo Crítico" },
+  high_risk: { icon: AlertTriangle, className: "risk-badge-high", label: "Riesgo Alto" },
+  new_risk: { icon: Bell, className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", label: "Nuevo Riesgo" },
+  action_pending: { icon: Clock, className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", label: "Acciones Pendientes" },
   missing_evidence: { icon: FileX, className: "risk-badge-medium", label: "Sin Evidencia" },
   info: { icon: Info, className: "bg-blue-100 text-blue-700", label: "Información" },
 };
@@ -31,23 +40,23 @@ export default function AlertsPage() {
     queryFn: async (): Promise<AlertRecord[]> => {
       if (!selectedCompanyId) return [];
       try {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from("alerts")
           .select("*")
-          .eq("company_id", selectedCompanyId)
+          .eq("company_id", selectedCompanyId as string)
           .order("created_at", { ascending: false })
           .limit(100);
         
         if (error) {
-          console.error("Error fetching alerts:", error);
-          if (error.code === "PGRST204" || error.message.includes("does not exist")) {
+          logger.error("Error fetching alerts:", error);
+          if ((error as { code?: string }).code === "PGRST204" || error.message.includes("does not exist")) {
             return [];
           }
           throw error;
         }
         return (data ?? []) as AlertRecord[];
       } catch (e) {
-        console.error("Exception fetching alerts:", e);
+        logger.error("Exception fetching alerts:", e);
         return [];
       }
     },
@@ -77,22 +86,22 @@ export default function AlertsPage() {
   };
 
   const markRead = async (id: string) => {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("alerts")
       .update({ is_read: true })
       .eq("id", id);
     if (error) {
-      console.error("Error marking read:", error);
+      logger.error("Error marking read:", error);
     }
     refetch();
   };
 
   const markAllRead = async () => {
-    await (supabase as any)
+    await supabase
       .from("alerts")
       .update({ is_read: true })
       .eq("is_read", false)
-      .eq("company_id", selectedCompanyId);
+      .eq("company_id", selectedCompanyId as string);
     refetch();
     toast({ title: "Todas las alertas marcadas como leídas" });
   };
@@ -108,38 +117,52 @@ export default function AlertsPage() {
     const today = new Date().toISOString().split("T")[0];
 
     try {
-      const { data: risksRes } = await (supabase as any)
+      const { data: risksRes } = await supabase
         .from("risks")
         .select("id, name, risk_level, status")
         .eq("company_id", companyId);
 
-      const { data: actionsRes } = await (supabase as any)
+      const { data: actionsRes } = await supabase
         .from("actions")
-        .select("id, description, due_date, status, risk_id");
+        .select("id, description, due_date, status, risk_id, responsible");
 
-      // Filtrar acciones por los riesgos de la empresa seleccionada
-      const validRiskIds = new Set((risksRes ?? []).map((r: any) => r.id));
-      const companyActions = (actionsRes ?? []).filter((a: any) => validRiskIds.has(a.risk_id));
+      interface ActionRow { id: string; description: string | null; due_date: string | null; status: string | null; risk_id: string | null; responsible: string | null; }
+      interface RiskRow { id: string; name: string | null; risk_level: number | null; status: string | null; }
 
-      const overdueActions = companyActions.filter((a: any) => {
-        const dueDate = a.due_date ?? a.fecha_limite;
-        return dueDate && dueDate < today && a.status !== "completed";
+      const validRiskIds = new Set((risksRes ?? []).map((r: RiskRow) => r.id));
+      const companyActions = (actionsRes ?? []).filter((a: ActionRow) => validRiskIds.has(a.risk_id));
+
+      // Overdue actions
+      const overdueActions = companyActions.filter((a: ActionRow) => {
+        return a.due_date && a.due_date < today && a.status !== "completed";
       });
 
-      const criticalRisks = (risksRes ?? []).filter((r: any) => {
+      // Critical risks (≥17)
+      const criticalRisks = (risksRes ?? []).filter((r: RiskRow) => {
+        return (r.risk_level ?? 0) >= 17 && r.status === "active";
+      });
+
+      // High risks (10-16)
+      const highRisks = (risksRes ?? []).filter((r: RiskRow) => {
         const level = r.risk_level ?? 0;
-        return level >= 17 && r.status === "active";
+        return level >= 10 && level < 17 && r.status === "active";
       });
 
-      const newAlerts = [];
+      // Pending actions (not assigned)
+      const pendingActions = companyActions.filter((a: ActionRow) => {
+        return a.status === "pending" && (!a.responsible || a.responsible === "Por asignar");
+      });
+
+      interface NewAlert { company_id: string; type: string; title: string; description: string; is_read: boolean; risk_id?: string | null; }
+      const newAlerts: NewAlert[] = [];
       
       for (const a of overdueActions) {
-        const desc = a.description ?? a.descripcion ?? "Acción";
+        const desc = a.description ?? "Acción";
         newAlerts.push({ 
           company_id: companyId, 
           type: "overdue_action", 
           title: "Acción vencida", 
-          description: `La acción "${String(desc).substring(0, 50)}" venció`,
+          description: `La acción "${desc.substring(0, 50)}" venció`,
           is_read: false,
         });
       }
@@ -150,17 +173,47 @@ export default function AlertsPage() {
           company_id: companyId,
           type: "critical_risk", 
           title: "Riesgo crítico detectado", 
-          description: `El riesgo "${name}" tiene nivel crítico (≥17)`,
+          description: `El riesgo "${name}" tiene nivel crítico (${r.risk_level})`,
+          risk_id: r.id,
+          is_read: false,
+        });
+      }
+
+      for (const r of highRisks) {
+        const name = r.name ?? "Riesgo";
+        newAlerts.push({
+          company_id: companyId,
+          type: "high_risk",
+          title: "Riesgo alto detectado",
+          description: `El riesgo "${name}" tiene nivel alto (${r.risk_level})`,
+          risk_id: r.id,
+          is_read: false,
+        });
+      }
+
+      if (pendingActions.length > 0) {
+        newAlerts.push({
+          company_id: companyId,
+          type: "action_pending",
+          title: "Acciones pendientes de asignación",
+          description: `${pendingActions.length} acciones correctivas están pendientes de asignar un responsable.`,
           is_read: false,
         });
       }
 
       if (newAlerts.length > 0) {
-        const { error: insErr } = await (supabase as any).from("alerts").insert(newAlerts);
+        // Clean old auto-generated alerts first to avoid duplicates
+        await supabase
+          .from("alerts")
+          .delete()
+          .eq("company_id", companyId)
+          .eq("is_read", false);
+
+        const { error: insErr } = await supabase.from("alerts").insert(newAlerts);
         
         if (insErr) {
-          console.error("Error al insertar alertas:", insErr);
-          if (insErr.code === "42501") {
+          logger.error("Error al insertar alertas:", insErr);
+          if ((insErr as { code?: string }).code === "42501") {
             toast({ 
               title: "Sin permisos para crear alertas", 
               description: "Las políticas de seguridad de la base de datos no permiten crear alertas desde la aplicación.", 
@@ -174,11 +227,12 @@ export default function AlertsPage() {
           toast({ title: `${newAlerts.length} alertas generadas` });
         }
       } else {
-        toast({ title: "No se detectaron nuevas alertas" });
+        toast({ title: "No se detectaron nuevas alertas", description: "Todo parece estar en orden." });
       }
-    } catch (e: any) {
-      console.error("Error generating alerts:", e);
-      toast({ title: "Error al generar alertas", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const error = e as Error;
+      logger.error("Error generating alerts:", error);
+      toast({ title: "Error al generar alertas", description: error.message, variant: "destructive" });
     }
 
     refetch();

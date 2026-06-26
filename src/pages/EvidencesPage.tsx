@@ -60,7 +60,7 @@ export default function EvidencesPage() {
         if (rErr) throw rErr;
         if (aErr) throw aErr;
 
-        const result = { evidences: (e ?? []) as any[], risks: r ?? [], actions: a ?? [] };
+        const result = { evidences: (e ?? []) as Evidence[], risks: r as Risk[] ?? [], actions: a as Action[] ?? [] };
         
         // Persistencia
         localStorage.setItem(`evidences_cache_${selectedCompanyId}`, JSON.stringify(result));
@@ -128,7 +128,7 @@ export default function EvidencesPage() {
       
       // Auto-update risk status to pending_review
       if (form.risk_id) {
-        await supabase.from("risks").update({ status: 'pending_review' as any }).eq("id", form.risk_id);
+        await supabase.from("risks").update({ status: 'pending_review' }).eq("id", form.risk_id);
       }
       
       setDialogOpen(false); 

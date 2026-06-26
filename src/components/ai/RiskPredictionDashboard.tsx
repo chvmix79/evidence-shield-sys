@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface RiskPredictionDashboardProps {
   companyId: string;
@@ -33,7 +34,7 @@ export function RiskPredictionDashboard({ companyId, onError }: RiskPredictionDa
     setError(null);
 
     try {
-      const { data, error: functionError } = await (supabase as any).functions.invoke("chat-ai", {
+      const { data, error: functionError } = await supabase.functions.invoke("chat-ai", {
         body: { 
           mode: "risk_analysis", 
           company_id: companyId 
@@ -49,8 +50,8 @@ export function RiskPredictionDashboard({ companyId, onError }: RiskPredictionDa
       } else {
         setError("No se pudo generar el análisis.");
       }
-    } catch (err: any) {
-      console.error("AI Error:", err);
+    } catch (err) {
+      logger.error("AI Error:", err);
       setError("Error al conectar con el servicio de IA.");
     } finally {
       setLoading(false);

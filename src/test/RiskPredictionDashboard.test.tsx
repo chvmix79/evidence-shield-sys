@@ -15,9 +15,15 @@ vi.mock("@/hooks/use-toast", () => ({
   }),
 }));
 
-// Mock global fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    functions: {
+      invoke: vi.fn(),
+    },
+  },
+}));
+
+import { supabase } from "@/integrations/supabase/client";
 
 describe("RiskPredictionDashboard", () => {
   beforeEach(() => {
@@ -26,22 +32,22 @@ describe("RiskPredictionDashboard", () => {
 
   it("should render the AI header", () => {
     render(<RiskPredictionDashboard companyId="company-123" />);
-    expect(screen.getByText("Análisis Predictivo Gemini AI")).toBeInTheDocument();
+    expect(screen.getByText("Análisis Predictivo IA")).toBeInTheDocument();
   });
 
   it("should show generate button", () => {
     render(<RiskPredictionDashboard companyId="company-123" />);
-    expect(screen.getByText("Generar Insights")).toBeInTheDocument();
+    expect(screen.getByText("Generar")).toBeInTheDocument();
   });
 
   it("should handle successful prediction", async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ prediction: "### Recomendación\nAnalizar riesgos financieros." }),
+    (supabase.functions.invoke as any).mockResolvedValue({
+      data: { reply: "### Recomendación\nAnalizar riesgos financieros." },
+      error: null,
     });
 
     render(<RiskPredictionDashboard companyId="company-123" />);
-    const btn = screen.getByText("Generar Insights");
+    const btn = screen.getByText("Generar");
     fireEvent.click(btn);
 
     await waitFor(() => {
@@ -51,18 +57,17 @@ describe("RiskPredictionDashboard", () => {
   });
 
   it("should handle AI service error", async () => {
-    mockFetch.mockResolvedValue({
-      ok: false,
-      json: () => Promise.resolve({ error: "IA offline" }),
+    (supabase.functions.invoke as any).mockResolvedValue({
+      data: { error: "IA offline" },
+      error: null,
     });
 
     render(<RiskPredictionDashboard companyId="company-123" />);
-    const btn = screen.getByText("Generar Insights");
+    const btn = screen.getByText("Generar");
     fireEvent.click(btn);
 
-    // Error is handled via toast, which is mocked, so we just check it doesn't show prediction
     await waitFor(() => {
-      expect(screen.queryByText("Recomendación")).not.toBeInTheDocument();
+      expect(screen.getByText("IA offline")).toBeInTheDocument();
     });
   });
 });

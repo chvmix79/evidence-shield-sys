@@ -8,15 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Plus, Search, Building2, Users, Pencil, Trash2, FileText, LayoutDashboard } from "lucide-react";
+import { Plus, Search, Building2, Users, Pencil, Trash2, FileText, LayoutDashboard, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
 import { safeCacheClear } from "@/lib/safeCacheClear";
+import { logger } from "@/lib/logger";
+import type { CompanyRecord, SectorRecord, PlanRecord, CompanyFormData } from "@/types";
+import { RiskAssessmentWizard } from "@/components/RiskAssessmentWizard";
 
 const ITEMS_PER_PAGE = 9;
 type FormErrors = { name?: string; employee_count?: string };
@@ -38,32 +40,32 @@ export default function CompaniesPage() {
   const { data, isLoading: loading, error, refetch: fetchData } = useQuery({
     queryKey: ["companies-list"],
     queryFn: async () => {
-      console.log("[Companies] Cargando datos...");
+      logger.debug("[Companies] Cargando datos...");
       
-      let sData: any[] = [];
-      let pData: any[] = [];
-      let cData: any[] = [];
+      let sData: SectorRecord[] = [];
+      let pData: PlanRecord[] = [];
+      let cData: CompanyRecord[] = [];
 
       try {
         const [sRes, pRes, cRes] = await Promise.all([
-          (supabase as any).from("sectors").select("id, name").order("name"),
-          (supabase as any).from("plans").select("id, name, price, max_companies").order("price"),
-          (supabase as any).from("companies").select("id, name, sector_id, employee_count, risk_level, owner_id, created_at, plan_id").order("created_at", { ascending: false })
+          supabase.from("sectors").select("id, name").order("name"),
+          supabase.from("plans").select("id, name, price, max_companies").order("price"),
+          supabase.from("companies").select("id, name, sector_id, employee_count, risk_level, owner_id, created_at, plan_id").order("created_at", { ascending: false })
         ]);
         
-        sData = sRes.data ?? [];
-        pData = pRes.data ?? [];
-        cData = cRes.data ?? [];
+        sData = (sRes.data ?? []) as SectorRecord[];
+        pData = (pRes.data ?? []) as PlanRecord[];
+        cData = (cRes.data ?? []) as CompanyRecord[];
         
-        if (cRes.error) console.error("[Companies] Error cargando empresas:", cRes.error);
+        if (cRes.error) logger.error("[Companies] Error cargando empresas:", cRes.error);
       } catch (err) {
-        console.error("[Companies] Fallo en la carga paralela:", err);
+        logger.error("[Companies] Fallo en la carga paralela:", err);
       }
 
-      const companiesWithSectorNames = cData.map((company: any) => ({
+      const companiesWithSectorNames: CompanyRecord[] = cData.map((company) => ({
         ...company,
-        sector_name: sData.find((s: any) => s.id === company.sector_id)?.name,
-        plan_name: pData.find((p: any) => p.id === company.plan_id)?.name
+        sector_name: sData.find((s) => s.id === company.sector_id)?.name,
+        plan_name: pData.find((p) => p.id === company.plan_id)?.name
       }));
 
       const result = { companies: companiesWithSectorNames, sectors: sData, plans: pData };
@@ -91,12 +93,13 @@ export default function CompaniesPage() {
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editCompany, setEditCompany] = useState<any>(null);
+  const [editCompany, setEditCompany] = useState<CompanyRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [form, setForm] = useState({ name: "", sector_id: "", employee_count: "", risk_level: "medium", plan_id: "" });
-  const [detectedStandards, setDetectedStandards] = useState<any[]>([]);
+  const [form, setForm] = useState<CompanyFormData>({ name: "", sector_id: "", employee_count: "", risk_level: "medium", plan_id: "" });
+  const [detectedStandards, setDetectedStandards] = useState<{ name: string; code: string }[]>([]);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [wizardConfig, setWizardConfig] = useState<{ open: boolean; sectorId: string | null; companyId: string | null }>({ open: false, sectorId: null, companyId: null });
 
   useEffect(() => {
     const fetchDetected = async () => {
@@ -118,7 +121,7 @@ export default function CompaniesPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = (c: any) => {
+  const openEdit = (c: CompanyRecord) => {
     setEditCompany(c);
     setErrors({});
     setForm({ name: c.name, sector_id: c.sector_id ?? "", employee_count: String(c.employee_count ?? ""), risk_level: c.risk_level ?? "medium", plan_id: c.plan_id ?? "" });
@@ -139,47 +142,26 @@ export default function CompaniesPage() {
     }
 
     if (!validateForm()) return;
-    const payload: any = {
+    const payload: Partial<CompanyRecord> = {
       name: form.name, 
       sector_id: form.sector_id || null,
-      employee_count: form.employee_count ? Number(form.employee_count) : null,
+      employee_count: form.employee_count ? form.employee_count : null,
       risk_level: form.risk_level, 
-      owner_id: user.id,
       plan_id: form.plan_id || null,
     };
     if (editCompany) {
-      const { error } = await (supabase as any).from("companies").update(payload).eq("id", editCompany.id);
+      const { error } = await supabase.from("companies").update(payload).eq("id", editCompany.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Empresa actualizada" });
     } else {
-      const { data: newComp, error } = await (supabase as any).from("companies").insert(payload).select().single();
+      const insertPayload = { ...payload, owner_id: user.id };
+      const { data: newComp, error } = await supabase.from("companies").insert(insertPayload).select().single();
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
       
-      toast({ title: "Empresa creada", description: "Buscando riesgos sugeridos para el sector..." });
+      toast({ title: "Empresa creada", description: "Empresa creada exitosamente." });
 
-      if (newComp.sector_id) {
-        const { data: templates } = await (supabase as any)
-          .from("risk_templates")
-          .select("*")
-          .eq("sector_id", newComp.sector_id)
-          .eq("is_active", true);
-        
-        if (templates && templates.length > 0) {
-          const risksToInsert = templates.map((t: any) => ({
-            company_id: newComp.id,
-            name: t.name,
-            description: t.description,
-            type: t.type === 'seguridad' ? 'security' : t.type === 'operacional' ? 'operational' : t.type === 'financiero' ? 'financial' : t.type === 'legal' ? 'legal' : 'operational',
-            probability: t.probability || 3,
-            impact: t.impact || 3,
-            status: "active",
-            owner_id: user.id,
-            standard_id: t.standard_id
-          }));
-
-          await (supabase as any).from("risks").insert(risksToInsert);
-          toast({ title: "Riesgos cargados", description: `Se configuraron ${templates.length} riesgos automáticamente.` });
-        }
+      if (newComp?.sector_id) {
+        setWizardConfig({ open: true, sectorId: newComp.sector_id, companyId: newComp.id });
       }
     }
     setDialogOpen(false);
@@ -309,10 +291,15 @@ export default function CompaniesPage() {
                       <span>{c.employee_count.toLocaleString()} empleados</span>
                     </div>
                   ) : null}
-                  <div className="flex items-center justify-end gap-1 mt-4 pt-4 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex flex-wrap items-center justify-end gap-1.5 gap-y-2 mt-4 pt-4 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-primary hover:text-primary hover:bg-primary/5" onClick={() => handleViewDashboard(c.id)}>
                       <LayoutDashboard className="w-3.5 h-3.5" /> Ver Tablero
                     </Button>
+                    {c.sector_id && (
+                      <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => setWizardConfig({ open: true, sectorId: c.sector_id, companyId: c.id })}>
+                        <ClipboardList className="w-3.5 h-3.5" /> Riesgos
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => openEdit(c)}>
                       <Pencil className="w-3.5 h-3.5" /> Editar
                     </Button>
@@ -439,6 +426,16 @@ export default function CompaniesPage() {
         confirmLabel="Eliminar"
         variant="destructive"
         onConfirm={confirmDelete}
+      />
+
+      <RiskAssessmentWizard
+        open={wizardConfig.open}
+        onOpenChange={(open) => setWizardConfig(prev => ({ ...prev, open }))}
+        sectorId={wizardConfig.sectorId}
+        companyId={wizardConfig.companyId}
+        onSuccess={() => {
+          fetchData();
+        }}
       />
     </div>
   );

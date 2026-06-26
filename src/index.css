@@ -1,14 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── RISK & EVIDENCE MANAGER — DESIGN SYSTEM ─────────────────────────────── */
+/* ─── RISK & EVIDENCE MANAGER — PRECISION SAAS ──────────────────────── */
 
 @layer base {
   :root {
-    /* Brand palette — deep navy + amber accent */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* Brand palette — highly structured, high contrast */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%; /* Slate 900 */
 
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -16,87 +18,57 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Deep navy primary */
-    --primary: 222 65% 22%;
+    /* Deep Navy Primary */
+    --primary: 226 50% 11%;
     --primary-foreground: 210 40% 98%;
 
     /* Slate secondary */
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 222 47% 18%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11.2%;
 
-    --muted: 220 14% 94%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Amber accent */
+    /* Amber Accent - used strictly for insights/AI */
     --accent: 38 92% 50%;
     --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 74% 52%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --ring: 222 65% 22%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 226 50% 11%;
 
-    --radius: 0.625rem;
+    --radius: 0.5rem; /* Tight, professional radius */
 
-    /* Sidebar */
-    --sidebar-background: 222 50% 16%;
+    /* Sidebar - Deep Slate/Navy Vault */
+    --sidebar-background: 226 50% 8%;
     --sidebar-foreground: 210 40% 88%;
     --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 222 40% 22%;
-    --sidebar-accent-foreground: 210 40% 95%;
-    --sidebar-border: 222 40% 22%;
+    --sidebar-primary-foreground: 226 50% 8%;
+    --sidebar-accent: 226 40% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 226 30% 14%;
     --sidebar-ring: 38 92% 50%;
 
-    /* Risk level semantic tokens */
-    --risk-low: 142 72% 40%;
+    /* Risk Tokens (Strict Semantic) */
+    --risk-low: 142 72% 35%;
     --risk-low-bg: 142 60% 95%;
     --risk-medium: 38 92% 45%;
     --risk-medium-bg: 38 100% 95%;
     --risk-high: 25 95% 50%;
     --risk-high-bg: 25 100% 95%;
-    --risk-critical: 0 74% 52%;
+    --risk-critical: 0 84% 60%;
     --risk-critical-bg: 0 86% 97%;
 
-    /* Status tokens */
+    /* Status */
     --status-pending: 215 16% 47%;
     --status-pending-bg: 215 14% 94%;
-    --status-progress: 222 65% 45%;
-    --status-progress-bg: 222 80% 95%;
-    --status-completed: 142 72% 40%;
+    --status-progress: 226 50% 11%;
+    --status-progress-bg: 226 20% 95%;
+    --status-completed: 142 72% 35%;
     --status-completed-bg: 142 60% 95%;
-  }
-
-  .dark {
-    --background: 222 47% 7%;
-    --foreground: 210 40% 96%;
-    --card: 222 47% 10%;
-    --card-foreground: 210 40% 96%;
-    --popover: 222 47% 10%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 38 92% 50%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 222 40% 16%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 222 40% 16%;
-    --muted-foreground: 215 20% 60%;
-    --accent: 38 92% 50%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 62% 40%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 40% 18%;
-    --input: 222 40% 18%;
-    --ring: 38 92% 50%;
-    --sidebar-background: 222 55% 9%;
-    --sidebar-foreground: 210 40% 88%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 222 40% 14%;
-    --sidebar-accent-foreground: 210 40% 95%;
-    --sidebar-border: 222 40% 14%;
-    --sidebar-ring: 38 92% 50%;
   }
 }
 
@@ -108,92 +80,86 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    /* Optical sizing and readability */
+    line-height: 1.5;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     text-wrap: balance;
+    /* Optical tracking: tighter on large sizes */
     letter-spacing: -0.02em;
   }
+  
+  h1 { letter-spacing: -0.03em; }
 
   p {
     text-wrap: pretty;
   }
 }
 
-/* ─── CUSTOM UTILITIES ─────────────────────────────────────────────────────── */
 @layer utilities {
-  .risk-badge-low {
-    background-color: hsl(var(--risk-low-bg));
-    color: hsl(var(--risk-low));
-    border: 1px solid hsl(var(--risk-low) / 0.25);
-  }
-  .risk-badge-medium {
-    background-color: hsl(var(--risk-medium-bg));
-    color: hsl(var(--risk-medium));
-    border: 1px solid hsl(var(--risk-medium) / 0.3);
-  }
-  .risk-badge-high {
-    background-color: hsl(var(--risk-high-bg));
-    color: hsl(var(--risk-high));
-    border: 1px solid hsl(var(--risk-high) / 0.3);
-  }
-  .risk-badge-critical {
-    background-color: hsl(var(--risk-critical-bg));
-    color: hsl(var(--risk-critical));
-    border: 1px solid hsl(var(--risk-critical) / 0.3);
+  /* Precision Structural Panels */
+  .hud-panel {
+    @apply bg-white border border-slate-200/60;
+    /* Clean linear depth */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
 
-  .status-badge-pending {
-    background-color: hsl(var(--status-pending-bg));
-    color: hsl(var(--status-pending));
+  .hud-card {
+    @apply bg-white border border-slate-200/60 transition-all duration-200;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
-  .status-badge-progress {
-    background-color: hsl(var(--status-progress-bg));
-    color: hsl(var(--status-progress));
-  }
-  .status-badge-completed {
-    background-color: hsl(var(--status-completed-bg));
-    color: hsl(var(--status-completed));
+  .hud-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-1px);
   }
 
+  /* Deep Input Controls */
+  .hud-input {
+    @apply bg-slate-50/50 border-slate-200 shadow-sm focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-all duration-200;
+  }
+
+  /* Risk Badges - Tabular numbers and strict colors */
+  .badge-metric {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .risk-badge-low { background-color: hsl(var(--risk-low-bg)); color: hsl(var(--risk-low)); border: 1px solid hsl(var(--risk-low) / 0.15); }
+  .risk-badge-medium { background-color: hsl(var(--risk-medium-bg)); color: hsl(var(--risk-medium)); border: 1px solid hsl(var(--risk-medium) / 0.2); }
+  .risk-badge-high { background-color: hsl(var(--risk-high-bg)); color: hsl(var(--risk-high)); border: 1px solid hsl(var(--risk-high) / 0.2); }
+  .risk-badge-critical { background-color: hsl(var(--risk-critical-bg)); color: hsl(var(--risk-critical)); border: 1px solid hsl(var(--risk-critical) / 0.2); }
+  .status-badge-pending { background-color: hsl(var(--status-pending-bg)); color: hsl(var(--status-pending)); }
+  .status-badge-progress { background-color: hsl(var(--status-progress-bg)); color: hsl(var(--status-progress)); }
+  .status-badge-completed { background-color: hsl(var(--status-completed-bg)); color: hsl(var(--status-completed)); }
+
+  /* Navigation Item - Tight feedback */
   .sidebar-nav-item {
-    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150;
-    color: hsl(var(--sidebar-foreground));
+    @apply flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150;
+    color: hsl(var(--sidebar-foreground) / 0.7);
   }
   .sidebar-nav-item:hover {
     background-color: hsl(var(--sidebar-accent));
     color: hsl(var(--sidebar-accent-foreground));
   }
   .sidebar-nav-item.active {
-    background-color: hsl(var(--sidebar-primary) / 0.15);
+    background-color: hsl(var(--sidebar-primary) / 0.1);
     color: hsl(var(--sidebar-primary));
-    border-left: 2px solid hsl(var(--sidebar-primary));
+    box-shadow: inset 2px 0 0 hsl(var(--sidebar-primary));
   }
 
-  .card-hover {
-    @apply transition-all duration-200;
-    box-shadow: 0 1px 3px hsl(222 47% 11% / 0.06), 0 1px 2px hsl(222 47% 11% / 0.04);
+  .mesh-gradient-dark {
+    background: radial-gradient(circle at 100% 0%, rgba(245, 158, 11, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, hsl(var(--sidebar-background)) 0%, transparent 50%);
+    background-color: hsl(var(--sidebar-background));
   }
-  .card-hover:hover {
-    box-shadow: 0 4px 16px hsl(222 47% 11% / 0.1), 0 2px 6px hsl(222 47% 11% / 0.06);
-    transform: translateY(-1px);
-  }
-
-  .animate-fade-in {
-    animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .animate-slide-up {
-    animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  
+  .glow-amber {
+    box-shadow: 0 0 15px hsl(var(--accent) / 0.2);
   }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}

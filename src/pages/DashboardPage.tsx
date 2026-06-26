@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 import { 
-  Shield, TrendingUp, AlertTriangle, CheckCircle2, 
+  Shield, AlertTriangle, CheckCircle2, 
   Clock, BarChart3, Building2, FileText
 } from "lucide-react";
 import { 
@@ -14,10 +15,13 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
+import type { 
+  DashboardStats, RiskSummary, RiskLevelEntry, 
+  ActionSummary, StatCardProps, ProgressItemProps 
+} from "@/types";
 
 
-const EMPTY_STATS = {
+const EMPTY_STATS: DashboardStats = {
   totalRisks: 0,
   criticalRisks: 0,
   activeRisks: 0,
@@ -26,7 +30,7 @@ const EMPTY_STATS = {
   completedActions: 0,
   evidences: 0,
   companies: 0,
-  recentRisks: [] as any[],
+  recentRisks: [],
   risksByLevel: [
     { name: "Bajo", value: 0 },
     { name: "Medio", value: 0 },
@@ -46,7 +50,7 @@ export default function DashboardPage() {
   // EMERGENCY FIX: Si hay empresas pero ninguna seleccionada por retraso del sistema
   useEffect(() => {
     if (!selectedCompanyId && companies.length > 0) {
-      console.log("[Dashboard] Forzando selección de empresa...");
+      logger.debug("[Dashboard] Forzando selección de empresa...");
       setSelectedCompanyId(companies[0].id);
     }
   }, [selectedCompanyId, companies, setSelectedCompanyId]);
@@ -58,24 +62,24 @@ export default function DashboardPage() {
       if (!selectedCompanyId) return EMPTY_STATS;
 
       const today = new Date().toISOString();
-      console.log("[Dashboard] Iniciando carga de datos para empresa:", selectedCompanyId);
+      logger.debug("[Dashboard] Iniciando carga de datos para empresa:", selectedCompanyId);
 
       try {
         // 1. Cargar Riesgos (Base fundamental)
-        console.log("[Dashboard] Consultando riesgos...");
+        logger.debug("[Dashboard] Consultando riesgos...");
         const { data: rData, error: rError } = await supabase
           .from("risks")
           .select("id, name, risk_level, type, status, company_id")
           .eq("company_id", selectedCompanyId)
           .limit(100);
 
-        if (rError) console.error("[Dashboard] Error en riesgos:", rError);
-        const r = rData ?? [];
-        const riskIds = r.map((x: any) => x.id);
+        if (rError) logger.error("[Dashboard] Error en riesgos:", rError);
+        const risks: RiskSummary[] = rData ?? [];
+        const riskIds = risks.map(r => r.id);
 
         // 2. Cargar Acciones (En paralelo para velocidad)
-        console.log("[Dashboard] Consultando acciones y contadores...");
-        let a: any[] = [];
+        logger.debug("[Dashboard] Consultando acciones y contadores...");
+        let actions: ActionSummary[] = [];
         let eCount = 0;
         let cCount = 0;
 
@@ -88,41 +92,43 @@ export default function DashboardPage() {
             supabase.from("companies").select("id", { count: "exact", head: true })
           ]);
 
-          a = aRes.data ?? [];
+          actions = (aRes.data as ActionSummary[]) ?? [];
           eCount = eRes.count ?? 0;
           cCount = cRes.count ?? 0;
         } catch (innerError) {
-          console.warn("[Dashboard] Error en carga secundaria:", innerError);
+          logger.warn("[Dashboard] Error en carga secundaria:", innerError);
         }
 
-        const score = r.length > 0
-          ? Math.round(r.reduce((s: number, x: any) => s + (Number(x.risk_level) || 0), 0) / r.length * 10) / 10
+        const score = risks.length > 0
+          ? Math.round(risks.reduce((s, r) => s + (Number(r.risk_level) || 0), 0) / risks.length * 10) / 10
           : 0;
 
-        const result = {
-          totalRisks: r.length,
-          criticalRisks: r.filter((x: any) => (Number(x.risk_level) || 0) >= 17).length,
-          activeRisks: r.filter((x: any) => x.status === "active").length,
-          pendingActions: a.filter((x: any) => x.status === "pending").length,
-          overdueActions: a.filter((x: any) => x.due_date && x.due_date < today && x.status !== "completed").length,
-          completedActions: a.filter((x: any) => x.status === "completed").length,
+        const getLevel = (r: RiskSummary) => Number(r.risk_level) || 0;
+
+        const result: DashboardStats = {
+          totalRisks: risks.length,
+          criticalRisks: risks.filter(r => getLevel(r) >= 17).length,
+          activeRisks: risks.filter(r => r.status === "active").length,
+          pendingActions: actions.filter(a => a.status === "pending").length,
+          overdueActions: actions.filter(a => a.due_date && a.due_date < today && a.status !== "completed").length,
+          completedActions: actions.filter(a => a.status === "completed").length,
           evidences: eCount,
           companies: cCount,
-          recentRisks: r.slice(0, 5),
+          recentRisks: risks.slice(0, 5),
           risksByLevel: [
-            { name: "Bajo", value: r.filter((x: any) => (Number(x.risk_level) || 0) <= 4).length },
-            { name: "Medio", value: r.filter((x: any) => { const l = Number(x.risk_level) || 0; return l >= 5 && l <= 9; }).length },
-            { name: "Alto", value: r.filter((x: any) => { const l = Number(x.risk_level) || 0; return l >= 10 && l <= 16; }).length },
-            { name: "Crítico", value: r.filter((x: any) => (Number(x.risk_level) || 0) >= 17).length },
+            { name: "Bajo", value: risks.filter(r => getLevel(r) <= 4).length },
+            { name: "Medio", value: risks.filter(r => { const l = getLevel(r); return l >= 5 && l <= 9; }).length },
+            { name: "Alto", value: risks.filter(r => { const l = getLevel(r); return l >= 10 && l <= 16; }).length },
+            { name: "Crítico", value: risks.filter(r => getLevel(r) >= 17).length },
           ],
           score,
         };
 
         localStorage.setItem(`dashboard_stats_${selectedCompanyId}`, JSON.stringify(result));
-        console.log("[Dashboard] Carga completada con éxito.");
+        logger.debug("[Dashboard] Carga completada con éxito.");
         return result;
       } catch (err) {
-        console.error("[Dashboard] Error crítico en la carga:", err);
+        logger.error("[Dashboard] Error crítico en la carga:", err);
         return EMPTY_STATS;
       }
     },
@@ -134,17 +140,17 @@ export default function DashboardPage() {
         try {
           return JSON.parse(saved);
         } catch (e) {
-          return EMPTY_STATS;
+          return undefined;
         }
       }
-      return EMPTY_STATS;
+      return undefined;
     },
     staleTime: 30000, // 30 segundos de frescura
     retry: 1,
   });
 
   // Debug log
-  console.log("[Dashboard] Renderizando con stats:", !!stats, "isLoading:", isLoading);
+  logger.debug("[Dashboard] Renderizando con stats:", !!stats, "isLoading:", isLoading);
 
   const s = stats || EMPTY_STATS;
 
@@ -178,9 +184,17 @@ export default function DashboardPage() {
 
 
 
-
-  // ELIMINADA LA PANTALLA DE LOADING CON ESQUELETOS
-  // Ahora mostramos el dashboard siempre, con datos reales o iniciales.
+  // Mostrar loading si estamos obteniendo datos y no hay caché
+  if (isLoading) {
+    return (
+      <div className="p-20 text-center space-y-6 animate-in fade-in duration-500">
+        <div className="w-16 h-16 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <BarChart3 className="w-8 h-8 text-slate-300" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900">Cargando métricas...</h2>
+      </div>
+    );
+  }
 
 
   const greet = () => {
@@ -191,17 +205,17 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-8 space-y-8 animate-in fade-in duration-700">
+    <div className="p-8 space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             {greet()}, <span className="text-amber-500">{user?.email?.split("@")[0] ?? "Usuario"}</span>
           </h1>
-          <p className="text-slate-500 font-medium">Panel de control de Riesgos e Inteligencia</p>
+          <p className="text-slate-500 font-medium mt-1">Panel de control de Riesgos e Inteligencia</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => navigate("/risks")} className="rounded-xl border-slate-200">Ver Riesgos</Button>
-          <Button onClick={() => navigate("/reports")} className="rounded-xl bg-slate-900 hover:bg-slate-800 shadow-lg">Generar Reporte</Button>
+          <Button variant="outline" onClick={() => navigate("/risks")} className="hud-input h-10 px-5 text-sm font-semibold text-slate-700">Ver Riesgos</Button>
+          <Button onClick={() => navigate("/reports")} className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 px-5 text-sm font-semibold shadow-sm transition-all">Generar Reporte</Button>
         </div>
       </div>
 
@@ -216,9 +230,9 @@ export default function DashboardPage() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           {/* Bar Chart */}
-          <div className="p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <div className="p-6 hud-panel rounded-2xl">
             <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-amber-500" />
+              <BarChart3 className="w-4 h-4 text-amber-500" />
               Distribución de Riesgos por Nivel
             </h3>
             <div className="h-[300px]">
@@ -229,7 +243,7 @@ export default function DashboardPage() {
                   <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                   <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
                   <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                    {s.risksByLevel.map((_entry: any, index: number) => (
+                    {s.risksByLevel.map((_entry: RiskLevelEntry, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Bar>
@@ -239,7 +253,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Risks Table */}
-          <div className="p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-6 hud-panel rounded-2xl overflow-hidden">
             <h3 className="text-lg font-bold text-slate-900 mb-6">Riesgos Recientes</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -251,7 +265,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {s.recentRisks.length > 0 ? s.recentRisks.map((risk: any) => (
+                  {s.recentRisks.length > 0 ? s.recentRisks.map((risk: RiskSummary) => (
                     <tr key={risk.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-2">
                         <p className="font-bold text-slate-900 text-sm">{risk.name}</p>
@@ -289,24 +303,24 @@ export default function DashboardPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-8">
-          <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white space-y-6 relative overflow-hidden">
-            <div className="absolute -right-4 -top-4 opacity-10">
+        <div className="space-y-6">
+          <div className="p-6 mesh-gradient-dark border border-slate-700/50 rounded-2xl text-white space-y-6 relative overflow-hidden shadow-lg">
+            <div className="absolute -right-4 -top-4 opacity-10 mix-blend-overlay">
               <Shield className="w-32 h-32" />
             </div>
             <div className="space-y-1">
-              <p className="text-slate-400 text-sm font-medium">Estado de Cumplimiento</p>
-              <p className="text-3xl font-black">{Math.round((s.completedActions / Math.max(s.totalRisks, 1)) * 100)}%</p>
+              <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest">Estado de Cumplimiento</p>
+              <p className="text-4xl font-bold font-heading">{Math.round((s.completedActions / Math.max(s.totalRisks, 1)) * 100)}%</p>
             </div>
-            <div className="w-full bg-white/10 rounded-full h-2">
+            <div className="w-full bg-white/10 rounded-full h-1.5">
               <div className="bg-amber-500 h-full rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, Math.round((s.completedActions / Math.max(s.totalRisks, 1)) * 100))}%` }} />
             </div>
-            <p className="text-xs text-slate-400">Progreso basado en acciones completadas vs riesgos identificados.</p>
+            <p className="text-xs text-slate-400 font-medium">Progreso basado en acciones completadas vs riesgos identificados.</p>
           </div>
 
-          <div className="p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
+          <div className="p-6 hud-panel rounded-2xl">
+            <h3 className="text-sm font-bold text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
               Acciones de Control
             </h3>
             <div className="space-y-6">
@@ -321,24 +335,26 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ label, value, icon: Icon, color, bg, desc }: any) {
+function StatCard({ label, value, icon: Icon, color, bg, desc }: StatCardProps) {
   return (
-    <div className="p-6 bg-white rounded-[2rem] border border-slate-100 shadow-sm group hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300">
-      <div className="flex items-start justify-between mb-4">
-        <div className={cn("p-4 rounded-2xl transition-transform group-hover:scale-110 duration-300", bg)}>
-          <Icon className={cn("w-6 h-6", color)} />
+    <div className="p-5 hud-card rounded-2xl group relative overflow-hidden">
+      <div className="flex flex-col gap-4 relative z-10">
+        <div className="flex items-center justify-between">
+          <div className={cn("p-2.5 rounded-xl transition-transform group-hover:scale-105 duration-300", bg)}>
+            <Icon className={cn("w-5 h-5", color)} />
+          </div>
         </div>
-      </div>
-      <div>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-3xl font-black text-slate-900">{value}</p>
-        <p className="text-[10px] text-slate-500 mt-2 font-medium">{desc}</p>
+        <div>
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
+          <p className="text-3xl font-bold text-slate-900 font-heading tracking-tight">{value}</p>
+          <p className="text-[11px] text-slate-400 mt-1 font-medium">{desc}</p>
+        </div>
       </div>
     </div>
   );
 }
 
-function ProgressItem({ label, value, total, color }: any) {
+function ProgressItem({ label, value, total, color }: ProgressItemProps) {
   const percentage = total > 0 ? (value / total) * 100 : 0;
   return (
     <div className="space-y-2">

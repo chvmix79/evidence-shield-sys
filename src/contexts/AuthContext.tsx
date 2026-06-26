@@ -3,6 +3,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { hardCacheClear } from "@/lib/safeCacheClear";
 import { differenceInDays, addDays } from "date-fns";
+import { logger } from "@/lib/logger";
 
 type UserRole = "superadmin" | "admin" | "user" | "auditor";
 
@@ -52,20 +53,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfileData = useCallback(async (userId: string) => {
     try {
-      console.log("[Auth] Cargando perfil para:", userId);
-      // Intentar cargar datos con un margen mayor
+      logger.debug("[Auth] Cargando perfil para:", userId);
       const { data: roleData, error: roleError } = await supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle();
       const { data: profile, error: profError } = await supabase.from("profiles").select("plan_id, subscription_end_date, subscription_status").eq("id", userId).maybeSingle();
 
-      if (roleError) console.warn("[Auth] Error cargando rol:", roleError);
-      if (profError) console.warn("[Auth] Error cargando perfil:", profError);
+      if (roleError) logger.warn("[Auth] Error cargando rol:", roleError);
+      if (profError) logger.warn("[Auth] Error cargando perfil:", profError);
 
       const finalRole = (roleData?.role as UserRole) ?? "user";
       setRole(finalRole);
       localStorage.setItem("last_user_role", finalRole);
 
       const planId = profile?.plan_id || '2db10bc8-7de4-403d-802b-948eeb19b860';
-      const plansMap: Record<string, any> = {
+      const plansMap: Record<string, { id: string; name: string; max_companies: number }> = {
         '2db10bc8-7de4-403d-802b-948eeb19b860': { id: '2db10bc8-7de4-403d-802b-948eeb19b860', name: 'Básico', max_companies: 1 },
         '41465153-4d90-41a3-a4af-66e4777e5738': { id: '41465153-4d90-41a3-a4af-66e4777e5738', name: 'Profesional', max_companies: 5 },
         '6a8803e7-ea12-4e31-9270-b660cf6de8d1': { id: '6a8803e7-ea12-4e31-9270-b660cf6de8d1', name: 'Enterprise', max_companies: 999 }
@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isBlocked: isBlocked
       });
     } catch (e) {
-      console.error("Auth Critical Error:", e);
+      logger.error("Auth Critical Error:", e);
       setRole("user");
     } finally {
       setLoading(false);
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Failsafe extendido: 10 segundos para redes lentas
     const failSafe = setTimeout(() => {
       setLoading(false);
-      console.log("[Auth] Desbloqueo preventivo por tiempo agotado.");
+      logger.debug("[Auth] Desbloqueo preventivo por tiempo agotado.");
     }, 10000);
 
     // 1. Obtener sesión inicial
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 2. Suscribirse a cambios
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log(`[Auth] Evento: ${event}`);
+      logger.debug(`[Auth] Evento: ${event}`);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
 
@@ -206,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut();
     } catch (err) {
-      console.error("SignOut background error:", err);
+      logger.error("SignOut background error:", err);
     }
   };
 

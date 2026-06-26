@@ -7,6 +7,8 @@ import { format } from "date-fns";
 import { Activity, AlertTriangle, RefreshCw } from "lucide-react";
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
+import type { AuditLog } from "@/types";
 
 export default function AuditLogsPage() {
   const { data: logs, isLoading, error: fetchError } = useQuery({
@@ -19,7 +21,7 @@ export default function AuditLogsPage() {
         .limit(100);
 
       if (error) {
-        console.error("Audit logs error:", error);
+        logger.error("Audit logs error:", error);
         return [];
       }
 
@@ -79,7 +81,7 @@ export default function AuditLogsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs?.map((log: any) => (
+                {logs?.map((log: AuditLog) => (
                   <TableRow key={log.id}>
                     <TableCell className="whitespace-nowrap">
                       {log.created_at ? format(new Date(log.created_at), "dd/MM/yy HH:mm:ss") : "N/A"}
@@ -90,14 +92,14 @@ export default function AuditLogsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-xs capitalize">
-                      {log.entity?.replace('_', ' ')}
+                      {log.entity_type?.replace(/_/g, ' ')}
                     </TableCell>
                     <TableCell className="font-medium text-xs">
                       {log.userEmail}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       <div className="max-w-[300px] truncate">
-                        {log.details ? JSON.stringify(log.details).substring(0, 50) + "..." : "Sin detalles"}
+                        {log.old_data ? JSON.stringify(log.old_data).substring(0, 50) + "..." : "Sin detalles"}
                       </div>
                     </TableCell>
 

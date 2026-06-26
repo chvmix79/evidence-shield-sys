@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Upload, CheckCircle2, Loader2, File, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 
 type ExternalAction = {
   id: string;
@@ -27,12 +28,11 @@ export default function ExternalUploadPage() {
     async function loadAction() {
       if (!token) return;
       try {
-        // @ts-ignore - Tipo pendiente de regeneración en database.types.ts
         const { data, error } = await supabase.rpc('get_action_by_token', { p_token: token });
         if (error) throw error;
         setAction(data as unknown as ExternalAction);
       } catch (err) {
-        console.error("Error cargando tarea:", err);
+        logger.error("Error cargando tarea:", err);
       } finally {
         setLoading(false);
       }
@@ -61,7 +61,6 @@ export default function ExternalUploadPage() {
         .getPublicUrl(uploadData.path);
 
       // 3. Call RPC to register evidence and complete action
-      // @ts-ignore - Tipo pendiente de regeneración
       const { error: rpcError } = await supabase.rpc('submit_provider_evidence', {
         p_token: token,
         p_file_url: urlData.publicUrl,

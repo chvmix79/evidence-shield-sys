@@ -134,16 +134,16 @@ export default function AuthPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] overflow-x-hidden font-sans selection:bg-amber-100 selection:text-amber-900">
-      <div className="fixed inset-0 z-0 opacity-40 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-amber-200/30 blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-200/20 blur-[120px]"></div>
+    <div className="min-h-screen bg-[#F8FAFC] overflow-x-hidden font-sans selection:bg-amber-100 selection:text-amber-900 relative">
+      <div className="fixed inset-0 z-0 opacity-50 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-amber-300/40 blur-[120px] animate-float" style={{ animationDuration: '8s' }}></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-blue-300/30 blur-[120px] animate-float" style={{ animationDuration: '12s', animationDelay: '2s' }}></div>
       </div>
 
       <nav className="fixed top-0 w-full z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src={chvLogo} alt="Logo" className="w-10 h-10 object-contain" />
-          <span className="text-2xl font-black text-slate-900 tracking-tighter">CHV <span className="text-amber-500">RiskInsight</span> AI</span>
+          <span className="text-2xl font-black text-slate-900 tracking-tighter font-heading">CHV <span className="text-amber-500">RiskInsight</span> AI</span>
         </div>
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => setMode("login")} className="text-slate-600 font-bold hover:bg-slate-100 rounded-full px-6">Soporte</Button>
@@ -158,7 +158,7 @@ export default function AuthPage() {
               <Sparkles className="w-3.5 h-3.5" /> Gestión de Riesgos 4.0
             </div>
             <div className="space-y-4">
-              <h1 className="text-6xl lg:text-8xl font-black text-slate-900 leading-[0.9] tracking-tighter">Control Total <br/><span className="text-amber-500">Inteligente</span></h1>
+              <h1 className="text-6xl lg:text-8xl font-black text-slate-900 leading-[0.9] tracking-tighter font-heading">Control Total <br/><span className="text-amber-500">Inteligente</span></h1>
               <p className="text-xl text-slate-500 leading-relaxed max-w-lg">La plataforma SaaS líder para la automatización de riesgos y cumplimiento normativo.</p>
             </div>
             <div className="grid sm:grid-cols-2 gap-8">
@@ -173,22 +173,36 @@ export default function AuthPage() {
           </div>
 
           <div id="login" className="relative">
-            <div className="relative bg-white/80 backdrop-blur-2xl border border-white shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-12 rounded-[3rem]">
+            <div className="relative p-12 rounded-[2.5rem] bg-white shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] border border-slate-200/50">
               <div className="mb-10 text-center">
-                <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-3">Hola de nuevo</h2>
+                <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-3 font-heading">
+                  {mode === "login" ? "Hola de nuevo" : "Crea tu cuenta"}
+                </h2>
+                {mode === "signup" && selectedPlan && (
+                  <p className="text-sm text-slate-500 font-medium">
+                    Plan seleccionado: <span className="font-bold text-amber-600">{selectedPlan}</span>
+                  </p>
+                )}
               </div>
-              <form onSubmit={handleSubmit} className="space-y-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {mode === "signup" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="text-slate-900 font-bold text-sm">Nombre Completo</Label>
+                    <Input id="fullName" type="text" placeholder="Juan Pérez" className="bg-slate-50/50 border-slate-200/60 h-14 rounded-2xl focus-visible:ring-amber-500/30 transition-all" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-slate-900 font-bold text-sm">Correo corporativo</Label>
-                  <Input id="email" type="email" placeholder="nombre@empresa.com" className="bg-slate-50/50 border-slate-200/60 h-14 rounded-2xl" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input id="email" type="email" placeholder="nombre@empresa.com" className="bg-slate-50/50 border-slate-200/60 h-14 rounded-2xl focus-visible:ring-amber-500/30 transition-all" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-slate-900 font-bold text-sm">Contraseña</Label>
-                  <Input id="password" type={showPass ? "text" : "password"} className="bg-slate-50/50 border-slate-200/60 h-14 rounded-2xl" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <Input id="password" type={showPass ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} className="bg-slate-50/50 border-slate-200/60 h-14 rounded-2xl focus-visible:ring-amber-500/30 transition-all" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 </div>
                 {error && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm font-bold">{error}</div>}
-                <Button type="submit" className="w-full h-16 rounded-[1.5rem] bg-slate-900 hover:bg-slate-800 text-white font-black text-xl" disabled={loading}>
-                  {loading ? <RefreshCw className="animate-spin" /> : "Entrar al Sistema"}
+                {message && <div className="p-3 bg-green-50 text-green-700 rounded-xl text-sm font-bold">{message}</div>}
+                <Button type="submit" className="w-full h-16 rounded-[1.5rem] bg-slate-900 hover:bg-slate-800 text-white font-black text-xl mt-4 shadow-lg transition-all" disabled={loading}>
+                  {loading ? <RefreshCw className="animate-spin" /> : (mode === "login" ? "Entrar al Sistema" : "Registrarme")}
                 </Button>
                 
                 {/* BOTÓN DE LIMPIEZA TOTAL */}
@@ -227,15 +241,15 @@ export default function AuthPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-6">
-              <h2 className="text-4xl font-black text-slate-900 leading-tight">
+              <h2 className="text-4xl font-black text-slate-900 leading-tight font-heading">
                 Especializados en <span className="text-primary">sectores críticos</span>
               </h2>
               <p className="text-slate-600 leading-relaxed">
                 Nuestra plataforma automatiza la configuración de normativas específicas según tu industria. Olvídate de crear riesgos desde cero; nuestra <span className="font-bold">IA Inteligente</span> lo hace por ti.
               </p>
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-4 mt-8">
                 {industrySectors.map(s => (
-                   <div key={s.name} className="p-6 bg-white rounded-[1.5rem] border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(99,102,241,0.1)] hover:-translate-y-1 transition-all duration-300 group">
+                   <div key={s.name} className="p-6 bg-white rounded-[1.5rem] border border-slate-200 shadow-sm hover:-translate-y-1 transition-all duration-300 group">
                     <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center mb-3 group-hover:bg-primary group-hover:text-white transition-colors">
                       <Shield className="w-4 h-4" />
                     </div>
@@ -247,8 +261,7 @@ export default function AuthPage() {
               </div>
             </div>
             <div className="relative group">
-              <div className="absolute -inset-4 bg-amber-500/10 rounded-[3rem] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-              <div className="relative bg-[#0f172a] rounded-[2.5rem] p-8 shadow-2xl overflow-hidden border border-slate-800 ring-1 ring-white/10">
+              <div className="relative mesh-gradient-dark rounded-2xl p-8 shadow-xl overflow-hidden border border-slate-700">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/30 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
                     <Sparkles className="w-7 h-7 text-amber-500" />
@@ -293,11 +306,11 @@ export default function AuthPage() {
       </section>
 
       {/* Plans Section */}
-      <section className="py-24 bg-white border-b border-slate-200 px-6">
+      <section className="py-24 bg-white px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900">Planes adaptados a tu escala</h2>
-            <p className="text-slate-500 max-w-2xl mx-auto">Comienza hoy y escala tu gestión de riesgos a medida que tu organización crece.</p>
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900 font-heading tracking-tight">Planes adaptados a tu escala</h2>
+            <p className="text-slate-500 max-w-2xl mx-auto text-lg">Comienza hoy y escala tu gestión de riesgos a medida que tu organización crece.</p>
             
             <div className="flex items-center justify-center gap-4 mt-8">
               <span className={cn("text-sm font-bold", billingPeriod === "month" ? "text-slate-900" : "text-slate-400")}>Mensual</span>
@@ -316,31 +329,37 @@ export default function AuthPage() {
 
           <div className="grid md:grid-cols-3 gap-8 items-stretch pt-4">
             {plans.map((p) => (
-              <div key={p.name} className={cn("relative p-8 rounded-[2rem] border transition-all duration-300 flex flex-col justify-between", p.color)}>
+              <div key={p.name} className={cn(
+                "relative p-8 rounded-[2.5rem] border transition-all duration-300 flex flex-col justify-between bg-white", 
+                p.best ? "border-primary shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] ring-2 ring-primary/20 scale-105 z-10" : "border-slate-200"
+              )}>
                 <div className="relative z-10">
                   {p.best && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
                       Más Popular
                     </div>
                   )}
                   <div className="mb-6">
-                    <h3 className="text-xl font-black mb-1">{p.name}</h3>
+                    <h3 className="text-xl font-black mb-1 text-slate-900">{p.name}</h3>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black tracking-tight">{p.price}</span>
-                      <span className="text-sm opacity-60">{p.periodLabel}</span>
+                      <span className="text-5xl font-black font-heading tracking-tight text-slate-900">{p.price}</span>
+                      <span className="text-sm opacity-60 text-slate-500">{p.periodLabel}</span>
                     </div>
                   </div>
                   <ul className="space-y-4 mb-8">
                     {p.features.map((f) => (
-                      <li key={f} className="flex gap-2 text-sm items-center font-medium opacity-80">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" /> {f}
+                      <li key={f} className="flex gap-3 text-sm items-center font-medium text-slate-600">
+                        <CheckCircle className="w-5 h-5 flex-shrink-0 text-primary" /> {f}
                       </li>
                     ))}
                   </ul>
                 </div>
                 <Button 
                   variant={p.best ? "default" : "outline"} 
-                  className="w-full h-11 font-bold rounded-2xl relative z-10" 
+                  className={cn(
+                    "w-full h-14 font-black rounded-[1.5rem] relative z-10 transition-all text-base", 
+                    p.best ? "bg-slate-900 hover:bg-slate-800 text-white shadow-xl" : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                  )} 
                   onClick={() => {
                     setSelectedPlan(p.name);
                     setMode("signup");
@@ -356,7 +375,7 @@ export default function AuthPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 bg-slate-900 text-slate-400 px-6">
+      <footer className="py-12 bg-slate-900 border-t border-slate-800 text-slate-400 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
             <Shield className="w-6 h-6 text-primary" />

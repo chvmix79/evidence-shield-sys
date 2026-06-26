@@ -12,6 +12,8 @@ import { Building2, Users, ShieldAlert, Trash2, UserPlus, CreditCard, CheckCircl
 import { format, addDays } from "date-fns";
 import { TemplateManager } from "@/components/admin/TemplateManager";
 import { Input } from "@/components/ui/input";
+import { logger } from "@/lib/logger";
+import type { CompanyRecord, Profile, UserRole } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { WITH_TIMEOUT } from "@/lib/supabaseSafe";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,12 +33,12 @@ export default function SuperAdminPage() {
     queryKey: ["admin-companies"],
     queryFn: async () => {
       return await WITH_TIMEOUT((async () => {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from("companies")
           .select("id, name, employee_count, risk_level, created_at, sector_id")
           .order("created_at", { ascending: false });
         if (error) throw error;
-        return data || [];
+        return (data ?? []) as CompanyRecord[];
       })(), 8000, "La carga de empresas ha tardado más de lo esperado.");
     },
   });
@@ -46,31 +48,32 @@ export default function SuperAdminPage() {
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      console.log("[SuperAdmin] Iniciando carga de usuarios...");
+      logger.debug("[SuperAdmin] Iniciando carga de usuarios...");
       try {
-        const { data: roles, error: rolesError } = await (supabase as any)
+        const { data: roles, error: rolesError } = await supabase
           .from("user_roles")
           .select("*")
           .order("created_at", { ascending: false });
 
         if (rolesError) throw rolesError;
 
-        const { data: profiles, error: profError } = await (supabase as any)
+        const { data: profiles, error: profError } = await supabase
           .from("profiles")
           .select("*");
 
-        if (profError) console.warn("[SuperAdmin] Error cargando perfiles:", profError);
+        if (profError) logger.warn("[SuperAdmin] Error cargando perfiles:", profError);
 
-        console.log("[SuperAdmin] Datos crudos:", { roles: roles?.length, profiles: profiles?.length });
+        logger.debug("[SuperAdmin] Datos crudos:", { roles: roles?.length, profiles: profiles?.length });
+        const roleList = (roles ?? []) as UserRole[];
 
         if (!roles || roles.length === 0) {
-          console.warn("[SuperAdmin] No se encontraron roles en la base de datos.");
+          logger.warn("[SuperAdmin] No se encontraron roles en la base de datos.");
           return [];
         }
         
-        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        const profileMap = new Map((profiles || []).map((p: Profile) => [p.id, p]));
 
-        return roles.map((r: any) => {
+        return roleList.map((r: UserRole) => {
           const profile = profileMap.get(r.user_id);
           return {
             ...r,
@@ -80,9 +83,10 @@ export default function SuperAdminPage() {
             subscription_status: profile?.subscription_status || 'active'
           };
         });
-      } catch (e: any) {
-        console.error("[SuperAdmin] Error crítico en fetch:", e);
-        toast({ title: "Error de conexión", description: e.message, variant: "destructive" });
+      } catch (e) {
+        const error = e as Error;
+        logger.error("[SuperAdmin] Error crítico en fetch:", error);
+        toast({ title: "Error de conexión", description: error.message, variant: "destructive" });
         return [];
       }
     },
@@ -90,7 +94,7 @@ export default function SuperAdminPage() {
 
   const handleUpdatePlan = async (userId: string, newPlan: string, period: 'month' | 'year' = 'month') => {
     try {
-      const updates: any = { plan_id: newPlan };
+      const updates: Record<string, unknown> = { plan_id: newPlan };
       const days = period === 'year' ? 365 : 30;
       
       const { data: currentProfile } = await supabase.from("profiles").select("subscription_end_date").eq("id", userId).single();
@@ -107,8 +111,9 @@ export default function SuperAdminPage() {
         description: `El usuario ahora tiene el plan ${newPlan} por 1 ${period === 'year' ? 'año' : 'mes'}` 
       });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (e: any) {
-      toast({ title: "Error al actualizar plan", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const error = e as Error;
+      toast({ title: "Error al actualizar plan", description: error.message, variant: "destructive" });
     }
   };
 
@@ -118,8 +123,9 @@ export default function SuperAdminPage() {
       if (error) throw error;
       toast({ title: "Rol actualizado", description: `El usuario ahora es ${newRole}` });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (e: any) {
-      toast({ title: "Error al actualizar rol", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const error = e as Error;
+      toast({ title: "Error al actualizar rol", description: error.message, variant: "destructive" });
     }
   };
 
@@ -132,8 +138,9 @@ export default function SuperAdminPage() {
       if (error) throw error;
       toast({ title: "Vencimiento actualizado", description: "La fecha ha sido guardada." });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const error = e as Error;
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
@@ -245,7 +252,7 @@ export default function SuperAdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {companies.map((company: any) => (
+                    {companies.map((company: CompanyRecord) => (
                       <TableRow key={company.id}>
                         <TableCell className="font-medium">{company.name || "Sin nombre"}</TableCell>
                         <TableCell>{company.employee_count || "—"}</TableCell>
@@ -291,7 +298,7 @@ export default function SuperAdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((u: any) => (
+                    {users.map((u: UserRole) => (
                       <TableRow key={u.id}>
                         <TableCell className="font-medium">{u.email}</TableCell>
                         <TableCell>
@@ -324,7 +331,7 @@ export default function SuperAdminPage() {
                           </Select>
                         </TableCell>
                         <TableCell>
-                          <Select defaultValue="month" onValueChange={(v: any) => handleUpdatePlan(u.user_id, u.plan_id, v)}>
+                          <Select defaultValue="month" onValueChange={(v: string) => handleUpdatePlan(u.user_id, u.plan_id!, v)}>
                             <SelectTrigger className="w-24 h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>

@@ -1,19 +1,21 @@
 import React, { Component } from "react";
+import * as Sentry from "@sentry/react";
 import { Button } from "@/components/ui/button";
 import { hardCacheClear, moduleCacheClear } from "@/lib/safeCacheClear";
+import { logger } from "@/lib/logger";
 import { AlertTriangle } from "lucide-react";
 
 
 interface Props {
-  children?: any;
-  fallback?: any;
+  children?: React.ReactNode;
+  fallback?: React.ReactNode;
   variant?: "full" | "mini";
   resetKey?: string;
 }
 
 interface State {
   hasError: boolean;
-  error: any;
+  error: Error | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -24,14 +26,15 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error) {
-    console.error("ErrorBoundary:", error.message);
+    logger.error("ErrorBoundary:", error.message);
+    Sentry.captureException(error);
     const isChunkError = 
       error?.message?.includes("Failed to fetch") ||
       error?.message?.includes("loading chunk");
     
     if (isChunkError) {
       const moduleName = this.getModuleName(this.props.resetKey);
-      console.log("[ErrorBoundary] Chunk error in:", moduleName);
+      logger.warn("[ErrorBoundary] Chunk error in:", moduleName);
       moduleCacheClear(moduleName);
       setTimeout(() => window.location.reload(), 100);
     }
@@ -59,7 +62,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   handleRetry = () => {
     const moduleName = this.getModuleName(this.props.resetKey);
-    console.log("[ErrorBoundary] Reintentando carga de módulo:", moduleName || "Global");
+    logger.debug("[ErrorBoundary] Reintentando carga de módulo:", moduleName || "Global");
     
     // Limpiar flag de recarga forzada para permitir nuevos intentos si es necesario
     window.sessionStorage.removeItem("page-has-been-forced-refreshed");

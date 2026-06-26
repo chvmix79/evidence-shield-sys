@@ -1,4 +1,5 @@
 import React, { lazy } from "react";
+import { logger } from "@/lib/logger";
 
 export const lazyWithRetry = (componentImport: () => Promise<any>) => {
   return lazy(async () => {
@@ -17,7 +18,7 @@ export const lazyWithRetry = (componentImport: () => Promise<any>) => {
       if (isChunkError && !pageHasAlreadyBeenForceRefreshed) {
         // Marcamos que ya intentamos refrescar una vez para evitar bucles
         window.sessionStorage.setItem("page-has-been-forced-refreshed", "true");
-        console.warn("[lazyWithRetry] Error de chunk detectado. Forzando recarga de aplicación...");
+        logger.warn("[lazyWithRetry] Error de chunk detectado. Forzando recarga de aplicación...");
         
         // Limpiamos cachés locales no esenciales
         try {
@@ -30,7 +31,7 @@ export const lazyWithRetry = (componentImport: () => Promise<any>) => {
       }
 
       // Si ya refrescamos y sigue fallando, lanzamos el error para que el ErrorBoundary lo capture
-      console.error("[lazyWithRetry] Error persistente tras recarga:", error);
+      logger.error("[lazyWithRetry] Error persistente tras recarga:", error);
       throw error;
     }
   });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as Sentry from '@sentry/react';
 import { hardCacheClear } from '@/lib/safeCacheClear';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,8 +10,6 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CompanyProvider } from '@/contexts/CompanyContext';
 import AppLayout from '@/components/AppLayout';
-import AuthPage from '@/pages/AuthPage';
-import NotFound from '@/pages/NotFound';
 import { ShieldAlert, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -32,6 +31,8 @@ const AuditLogsPage = lazyWithRetry(() => import('@/pages/AuditLogsPage'));
 const ExternalUploadPage = lazyWithRetry(() => import('@/pages/ExternalUploadPage'));
 const WebhooksPage = lazyWithRetry(() => import('@/pages/WebhooksPage'));
 const InventoryPage = lazyWithRetry(() => import('@/pages/InventoryPage'));
+const AuthPage = lazyWithRetry(() => import('@/pages/AuthPage'));
+const NotFound = lazyWithRetry(() => import('@/pages/NotFound'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,8 +49,14 @@ const queryClient = new QueryClient({
 });
 
 
+declare global {
+  interface Window {
+    __QUERY_CLIENT__?: QueryClient;
+  }
+}
+
 if (typeof window !== 'undefined') {
-  (window as any).__QUERY_CLIENT__ = queryClient;
+  window.__QUERY_CLIENT__ = queryClient;
 }
 
 function VisibilityManager() {
@@ -62,6 +69,26 @@ function VisibilityManager() {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
+  return null;
+}
+
+function SentryUserTracker() {
+  const { user, role, session } = useAuth();
+  
+  useEffect(() => {
+    if (user) {
+      Sentry.setUser({
+        id: user.id,
+        email: user.email || undefined,
+        username: user.email?.split('@')[0],
+        role: role || 'unknown',
+        session_id: session?.access_token?.slice(0, 8),
+      });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [user?.id, role, session?.access_token]);
+  
   return null;
 }
 
@@ -153,7 +180,11 @@ function AuthRoute() {
   }
   
   if (session && !mfaRequired) return <Navigate to='/' replace />;
-  return <AuthPage />;
+  return (
+    <ModuleShell fallbackText='Cargando página de inicio...'>
+      <AuthPage />
+    </ModuleShell>
+  );
 }
 
 
@@ -166,6 +197,7 @@ const App = () => (
         <AuthProvider>
           <CompanyProvider>
             <VisibilityManager />
+            <SentryUserTracker />
             <ErrorBoundary variant='full'>
               <ModuleIsolator>
                 <Routes>

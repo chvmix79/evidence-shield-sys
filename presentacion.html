@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pitch Deck | CHV RiskInsight</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #020617;
+      --bg-card: rgba(15, 23, 42, 0.6);
+      --primary: #10b981;
+      --primary-glow: rgba(16, 185, 129, 0.4);
+      --secondary: #3b82f6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(51, 65, 85, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    /* Animated Background */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      background: radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08), transparent 25%),
+                  radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.08), transparent 25%);
+    }
+
+    /* Navbar */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 1.5rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(2, 6, 23, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .brand {
+      font-size: 1.75rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #10b981, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: color 0.3s;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 8rem 2rem 4rem;
+    }
+
+    /* Sections */
+    section {
+      min-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 6rem 0;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeUp 0.8s forwards;
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.4rem 1rem;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--primary);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 4.5rem;
+      line-height: 1.1;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      letter-spacing: -1px;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, #10b981, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      letter-spacing: -0.5px;
+    }
+
+    p.lead {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 700px;
+      margin-bottom: 2.5rem;
+    }
+
+    /* Grids & Cards */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .icon-box {
+      width: 50px; height: 50px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .glass-card h3 { font-size: 1.4rem; margin-bottom: 1rem; font-weight: 600; }
+    .glass-card p { color: var(--text-muted); line-height: 1.6; font-size: 1rem; }
+
+    /* Visual Assets */
+    .hero-image-container {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    
+    .hero-image-container::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(to top, rgba(2,6,23,0.8), transparent);
+    }
+
+    .hero-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.7s;
+    }
+
+    .hero-image-container:hover .hero-img {
+      transform: scale(1.05);
+    }
+
+    /* Metric Cards */
+    .metric {
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+      line-height: 1;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 2rem;
+      background: var(--primary);
+      color: #000;
+      font-weight: 700;
+      border-radius: 50px;
+      text-decoration: none;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .btn:hover {
+      background: #0ea5e9;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-animation"></div>
+
+  <nav>
+    <div class="brand">CHV RiskInsight</div>
+    <div class="nav-links">
+      <a href="#problema">1. Problema</a>
+      <a href="#solucion">2. Solución</a>
+      <a href="#tecnologia">3. Tecnología</a>
+      <a href="#competidores">4. Competidores</a>
+      <a href="#mercado">5. Mercado</a>
+      <a href="#modelo">6. Modelo</a>
+      <a href="#impacto">7. Impacto</a>
+      <a href="#equipo">8. Equipo</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    
+    <!-- HERO SECTION -->
+    <section id="hero" style="min-height: 90vh;">
+      <div class="grid-2">
+        <div>
+          <span class="badge">Plataforma GRC Empresarial</span>
+          <h1>Inteligencia para la <span>Gestión de Riesgos</span></h1>
+          <p class="lead">Centralizamos la identificación de riesgos, planes de acción y cumplimiento normativo para PYMEs a través de automatización e Inteligencia Artificial.</p>
+          <a href="#problema" class="btn">Explorar el Proyecto <i class="ri-arrow-right-line"></i></a>
+        </div>
+        <div class="hero-image-container">
+          <img src="ai_risk_dashboard.png" alt="AI Risk Dashboard" class="hero-img">
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. PROBLEMA -->
+    <section id="problema">
+      <span class="badge">01 / El Problema</span>
+      <h2>Las empresas operan a ciegas</h2>
+      <p class="lead">La gestión de riesgos tradicional está rota, dispersa y es dolorosamente manual.</p>
+      
+      <div class="grid-3">
+        <div class="glass-card">
+          <div class="icon-box" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><i class="ri-file-excel-line"></i></div>
+          <h3>Silos de Información</h3>
+          <p>Los riesgos (operativos, legales, financieros y ciberseguridad) viven en cientos de hojas de Excel desactualizadas y aisladas por departamento.</p>
+        </div>
+        <div class="glass-card">
+          <div class="icon-box" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><i class="ri-alarm-warning-line"></i></div>
+          <h3>Auditorías Dolorosas</h3>
+          <p>Recolectar evidencias para demostrar cumplimiento normativo (ISO, SARLAFT) toma meses de caos y búsquedas manuales en correos.</p>
+        </div>
+        <div class="glass-card">
+          <div class="icon-box" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><i class="ri-shield-keyhole-line"></i></div>
+          <h3>Ceguera Cibernética</h3>
+          <p>La mayoría de PYMEs creen que no son blanco de ataques y carecen de visibilidad sobre sus vulnerabilidades digitales y de fuga de datos.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SOLUCIÓN -->
+    <section id="solucion">
+      <div class="grid-2">
+        <div>
+          <span class="badge">02 / La Solución</span>
+          <h2>CHV RiskInsight</h2>
+          <p class="lead">Una única plataforma para centralizar, predecir y mitigar los riesgos de tu negocio con ayuda de la IA.</p>
+          
+          <div style="margin-top: 2rem;">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+              <i class="ri-check-line" style="color: var(--primary); font-size: 1.5rem;"></i>
+              <div>
+                <h4 style="font-size: 1.1rem; margin-bottom: 0.3rem;">Identificación Automatizada</h4>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Asistentes inteligentes (Wizards) por sector económico.</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+              <i class="ri-check-line" style="color: var(--primary); font-size: 1.5rem;"></i>
+              <div>
+                <h4 style="font-size: 1.1rem; margin-bottom: 0.3rem;">Plan de Acción Unificado</h4>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Gestión centralizada de responsables, fechas y evidencias comprobables.</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+              <i class="ri-check-line" style="color: var(--primary); font-size: 1.5rem;"></i>
+              <div>
+                <h4 style="font-size: 1.1rem; margin-bottom: 0.3rem;">Módulo Exclusivo de Ciberseguridad</h4>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Monitoreo especializado de postura de TI separado del riesgo de negocio.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-image-container">
+          <img src="global_impact_shield.png" alt="Global Impact Shield" class="hero-img">
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. TECNOLOGÍA -->
+    <section id="tecnologia">
+      <span class="badge">03 / Tecnología y Tracción</span>
+      <h2>Stack Empresarial Moderno</h2>
+      <p class="lead">No es un MVP frágil. Es una arquitectura B2B escalable y segura por diseño.</p>
+      
+      <div class="grid-4">
+        <div class="glass-card" style="padding: 1.5rem;">
+          <h3 style="font-size: 1.2rem;">Multi-Tenant (RLS)</h3>
+          <p style="font-size: 0.9rem;">Aislamiento criptográfico de datos por empresa usando Supabase Row Level Security.</p>
+        </div>
+        <div class="glass-card" style="padding: 1.5rem;">
+          <h3 style="font-size: 1.2rem;">Frontend React/Vite</h3>
+          <p style="font-size: 0.9rem;">Experiencia ultrarrápida (SPA) con diseño premium, Dark Mode y caché inteligente.</p>
+        </div>
+        <div class="glass-card" style="padding: 1.5rem;">
+          <h3 style="font-size: 1.2rem;">Gemini 1.5 AI</h3>
+          <p style="font-size: 0.9rem;">Agentes de IA predictivos que analizan contextos empresariales en tiempo real.</p>
+        </div>
+        <div class="glass-card" style="padding: 1.5rem;">
+          <h3 style="font-size: 1.2rem;">Tracción</h3>
+          <p style="font-size: 0.9rem;">Versión de producción funcional probada. Lista para onboarding de clientes iniciales.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. COMPETIDORES -->
+    <section id="competidores">
+      <span class="badge">04 / Competidores</span>
+      <h2>Por qué ganaremos</h2>
+      
+      <div class="grid-2" style="margin-top: 3rem;">
+        <div class="glass-card" style="border-color: rgba(239, 68, 68, 0.3);">
+          <div class="icon-box" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><i class="ri-ancient-gate-line"></i></div>
+          <h3>Soluciones Legacy (OneTrust, Archer)</h3>
+          <p>Son monstruos corporativos. Extremadamente costosos (+$50K USD/año), implementaciones de meses y muy complejos de usar para una PYME.</p>
+        </div>
+        <div class="glass-card" style="border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);">
+          <div class="icon-box"><i class="ri-rocket-line"></i></div>
+          <h3>CHV RiskInsight</h3>
+          <p>Implementación en minutos. Diseñado con experiencia de usuario moderna (UX), precios accesibles para empresas medianas y el poder predictivo de la IA integrado desde el día uno.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. MERCADO & 6. MODELO -->
+    <section id="mercado" style="padding-top: 2rem;">
+      <div class="grid-2">
+        <div>
+          <span class="badge">05 / El Mercado</span>
+          <h2>Un Océano Azul Regulatorio</h2>
+          <p class="lead" style="margin-bottom: 1.5rem;">Las exigencias de cumplimiento (Protección de Datos, Estándares ISO, SARLAFT, Ciberseguridad) ya no son exclusivas de multinacionales. Las leyes ahora obligan a las PYMEs.</p>
+          <div style="display: flex; gap: 2rem;">
+            <div>
+              <div class="metric">+$45B</div>
+              <p style="color: var(--text-muted);">Tamaño del mercado GRC global</p>
+            </div>
+            <div>
+              <div class="metric">14%</div>
+              <p style="color: var(--text-muted);">Crecimiento anual (CAGR)</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="glass-card" id="modelo">
+          <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">06 / Modelo de Negocio</span>
+          <h2 style="font-size: 2rem;">SaaS B2B Suscripción</h2>
+          <ul style="list-style: none; margin-top: 1.5rem;">
+            <li style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+              <strong>Standard Plan:</strong> $X/mes.<br>
+              <span style="color: var(--text-muted); font-size: 0.9rem;">Gestión para 1 empresa, módulos core de riesgos y plan de acción.</span>
+            </li>
+            <li style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+              <strong>Enterprise Plan:</strong> $Y/mes.<br>
+              <span style="color: var(--text-muted); font-size: 0.9rem;">Multi-tenant ilimitado, predicción avanzada con IA, módulo de Ciberseguridad y Webhooks.</span>
+            </li>
+            <li>
+              <strong>Onboarding & Setup:</strong> Tarifa única.<br>
+              <span style="color: var(--text-muted); font-size: 0.9rem;">Consultoría de integración e importación de matrices previas.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. IMPACTO -->
+    <section id="impacto">
+      <span class="badge">07 / El Impacto</span>
+      <h2>De Reactivos a Proactivos</h2>
+      
+      <div class="grid-3" style="margin-top: 2rem;">
+        <div class="glass-card" style="text-align: center; padding: 3rem 2rem;">
+          <i class="ri-money-dollar-circle-line" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem; display: block;"></i>
+          <h3>Económico</h3>
+          <p>Previene multas millonarias por incumplimientos legales, multas regulatorias y pagos de ransomware.</p>
+        </div>
+        <div class="glass-card" style="text-align: center; padding: 3rem 2rem;">
+          <i class="ri-timer-line" style="font-size: 3rem; color: var(--secondary); margin-bottom: 1rem; display: block;"></i>
+          <h3>Operativo</h3>
+          <p>Ahorra cientos de horas hombre al mes en preparación de auditorías centralizando todas las evidencias.</p>
+        </div>
+        <div class="glass-card" style="text-align: center; padding: 3rem 2rem;">
+          <i class="ri-mind-map" style="font-size: 3rem; color: #f59e0b; margin-bottom: 1rem; display: block;"></i>
+          <h3>Cultural</h3>
+          <p>Transforma a empresas "apaga-incendios" en organizaciones resilientes y con mentalidad de prevención.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. EQUIPO -->
+    <section id="equipo" style="text-align: center; min-height: 50vh;">
+      <span class="badge">08 / El Equipo</span>
+      <h2 style="margin-bottom: 2rem;">Visión y Ejecución</h2>
+      <p class="lead" style="margin: 0 auto;">Liderado por una visión clara: democratizar la seguridad y el compliance corporativo. Combinamos profundo conocimiento de procesos de negocio con desarrollo tecnológico de vanguardia apoyado en herramientas de Inteligencia Artificial para iterar y entregar valor de forma acelerada.</p>
+      
+      <div style="margin-top: 4rem;">
+        <a href="#" class="btn" style="background: white; color: black;">Ver Demo de Plataforma <i class="ri-play-fill"></i></a>
+      </div>
+    </section>
+
+  </div>
+
+</body>
+</html>

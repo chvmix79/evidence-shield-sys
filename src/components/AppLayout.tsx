@@ -16,9 +16,10 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import chvLogo from "@/assets/CHV_Logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import type { NavItem, SidebarContentProps } from "@/types";
 
 
-const navItems = [
+const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Empresas", href: "/companies", icon: Building2 },
   { label: "Riesgos", href: "/risks", icon: AlertTriangle },
@@ -44,11 +45,11 @@ function CompanySelector() {
         Empresa Seleccionada
       </p>
       <Select value={selectedCompanyId || ""} onValueChange={setSelectedCompanyId}>
-        <SelectTrigger className="w-full bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground h-9 text-xs">
+        <SelectTrigger className="w-full bg-slate-800/50 border-slate-700/50 text-white hover:bg-slate-700/50 transition-all h-10 text-xs rounded-xl">
           <SelectValue placeholder="Seleccionar empresa" />
         </SelectTrigger>
         <SelectContent>
-          {companies.map((c: any) => (
+          {companies.map((c) => (
             <SelectItem key={c.id} value={c.id} className="text-xs">
               {c.name}
             </SelectItem>
@@ -59,21 +60,21 @@ function CompanySelector() {
   );
 }
 
-function SidebarContent({ user, role, signOut, setSidebarOpen, location }: any) {
+function SidebarContent({ user, role, signOut, setSidebarOpen, location }: SidebarContentProps) {
   const { selectedCompanyId, companies } = useCompany();
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
-            <img src={chvLogo} alt="Logo" className="w-6 h-6 object-contain" />
+          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+            <img src={chvLogo} alt="Logo" className="w-6 h-6 object-contain drop-shadow-md" />
           </div>
           <div>
-            <p className="text-sm font-black leading-tight tracking-tight text-white">
+            <p className="text-sm font-bold leading-tight tracking-tight text-white font-heading">
               CHV RiskInsight
             </p>
-            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
+            <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-widest mt-0.5">
               AI Powered
             </p>
           </div>
@@ -87,7 +88,7 @@ function SidebarContent({ user, role, signOut, setSidebarOpen, location }: any) 
       {/* Navigation */}
       <ErrorBoundary variant="mini">
         <nav className="flex-1 p-4 space-y-0.5 overflow-y-auto">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3 px-3" style={{ color: "hsl(var(--sidebar-foreground) / 0.4)" }}>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 px-3 text-slate-500">
             Menú Principal
           </p>
           {navItems.filter(item => {
@@ -95,7 +96,7 @@ function SidebarContent({ user, role, signOut, setSidebarOpen, location }: any) 
             if (role === "superadmin" || role === "admin" || user?.email === 'chvmix79@gmail.com') return true;
             
             // Si el ítem tiene roles específicos, verificamos
-            if (item.roles && !item.roles.includes(role as any)) return false;
+            if (item.roles && !item.roles.includes(role as "superadmin" | "admin" | "auditor" | "user")) return false;
             
             return true;
           }).map(({ label, href, icon: Icon }) => {
@@ -121,19 +122,19 @@ function SidebarContent({ user, role, signOut, setSidebarOpen, location }: any) 
       </ErrorBoundary>
 
       {/* User info */}
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="rounded-xl p-3 space-y-2" style={{ background: "hsl(var(--sidebar-accent))" }}>
+      <div className="p-4 border-t border-slate-800/50 bg-slate-900/20">
+        <div className="rounded-xl p-4 space-y-3 bg-slate-800/30 border border-slate-700/50 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: "hsl(var(--sidebar-accent-foreground))" }}>
+              <p className="text-[13px] font-semibold truncate text-white">
                 {user?.email?.split("@")[0] ?? "Usuario"}
               </p>
-              <p className="text-xs truncate" style={{ color: "hsl(var(--sidebar-foreground) / 0.6)" }}>
+              <p className="text-[11px] font-medium truncate text-slate-400">
                 {user?.email}
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-sidebar-border/30">
+          <div className="flex flex-col gap-1 mt-3 pt-3 border-t border-slate-700/50">
             <SecuritySettings />
             
             <Button
@@ -142,7 +143,7 @@ function SidebarContent({ user, role, signOut, setSidebarOpen, location }: any) 
               className="w-full justify-start gap-2 h-8 text-[11px] hover:bg-orange-500/10 hover:text-orange-500"
               style={{ color: "hsl(var(--sidebar-foreground) / 0.6)" }}
               onClick={() => {
-                const qc = (window as any).__QUERY_CLIENT__;
+                const qc = (window as unknown as { __QUERY_CLIENT__?: { clear: () => void } }).__QUERY_CLIENT__;
                 if (qc) qc.clear();
                 window.location.reload();
               }}
@@ -178,8 +179,8 @@ function SidebarContent({ user, role, signOut, setSidebarOpen, location }: any) 
                   const duration = Date.now() - start;
                   if (error) throw error;
                   toast({ title: "Conexión Exitosa", description: `El servidor respondió en ${duration}ms. La red está operativa.`, variant: "default" });
-                } catch (err: any) {
-                  console.error("Diagnostic Error:", err);
+                } catch (err) {
+                  logger.error("Diagnostic Error:", err);
                   toast({ 
                     title: "Red Bloqueada", 
                     description: "Tu red local está impidiendo la conexión con la base de datos. Por favor, usa una VPN o cambia de red.", 
@@ -245,7 +246,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <aside
-        className="hidden lg:flex w-64 flex-shrink-0 flex-col h-full"
+        className="hidden lg:flex w-[280px] flex-shrink-0 flex-col h-full border-r border-slate-800/40 relative z-20"
         style={{ background: "hsl(var(--sidebar-background))" }}
       >
         <ErrorBoundary variant="mini" fallback={<div className="p-10 text-destructive text-xs">Error en Navegación. <Button onClick={() => window.location.reload()} size="sm" variant="link">Recargar</Button></div>}>
@@ -258,7 +259,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
           <aside
-            className="relative w-64 h-full flex flex-col"
+            className="relative w-[280px] h-full flex flex-col shadow-2xl border-r border-slate-800/50"
             style={{ background: "hsl(var(--sidebar-background))" }}
           >
             <button

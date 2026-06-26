@@ -44,9 +44,9 @@ export function AuditsManager() {
     // But we link auditor_id to auth.users, and profiles shares id.
     const { data: profs } = await supabase.from("profiles").select("id, full_name");
     
-    const mapped = (data || []).map((a: Audit) => ({
-      ...a,
-      profiles: profs?.find(p => p.id === (a as any).auditor_id) || { full_name: "Auditor" }
+    const mapped = (data || []).map((a: Record<string, unknown>) => ({
+      ...a as Audit,
+      profiles: profs?.find(p => p.id === a.auditor_id) || { full_name: "Auditor" }
     }));
     
     setAudits(mapped);
@@ -88,7 +88,7 @@ export function AuditsManager() {
     cancelled: { label: "Cancelada", color: "bg-red-100 text-red-800 border-red-200" },
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const dataToExport = audits.map(a => ({
       "Título": a.title,
       "Empresa": a.companies?.name || "",
@@ -97,7 +97,7 @@ export function AuditsManager() {
       "Fin": a.end_date,
       "Estado": statusMap[a.status]?.label || a.status
     }));
-    exportToExcel(dataToExport, "Auditorias", "Auditorias");
+    await exportToExcel(dataToExport, "Auditorias", "Auditorias");
   };
 
   return (
