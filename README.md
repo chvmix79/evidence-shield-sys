@@ -2,6 +2,15 @@
 
 > Plataforma SaaS multi-tenant para identificación, evaluación, mitigación y auditoría de riesgos empresariales con predicción asistida por inteligencia artificial.
 
+<div align="center">
+
+![CI](https://github.com/chvmix79/evidence-shield-sys/actions/workflows/ci.yml/badge.svg)
+![Tests](https://img.shields.io/badge/tests-291%20passed-brightgreen)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+</div>
+
 ---
 
 ## 📌 Descripción
@@ -139,7 +148,7 @@ RIESGOS/
 | React Hook Form + Zod | Latest | Formularios con validación |
 | Recharts | 2.x | Gráficos interactivos |
 | i18next | 25.x | Internacionalización |
-| jsPDF + xlsx | Latest | Exportación de reportes |
+| jsPDF + exceljs | Latest | Exportación de reportes (PDF + Excel) |
 
 ### Backend
 
@@ -238,7 +247,7 @@ WEBHOOK_SECRET=tu-webhook-secret
 | `npm run build` | Genera el build de producción |
 | `npm run preview` | Previsualiza el build de producción |
 | `npm run lint` | Ejecuta ESLint |
-| `npm run test` | Ejecuta tests unitarios (Vitest) |
+| `npm run test` | Ejecuta tests unitarios — **291 tests, 30 archivos** |
 | `npm run test:watch` | Tests en modo watch |
 | `npm run test:coverage` | Tests con reporte de cobertura |
 | `npm run test:e2e` | Tests end-to-end (Playwright) |
@@ -342,7 +351,7 @@ npm run build
 |---------|--------|
 | **Fase actual** | ✅ Producción-Ready (v1.2.0) |
 | **Módulos core** | ✅ Completados y estables |
-| **Testing** | ✅ Configurado (Vitest + Playwright) |
+| **Testing** | ✅ 291 tests, 30 archivos (Vitest + Playwright) |
 | **Seguridad** | ✅ RLS + RBAC + MFA implementados |
 | **IA** | ✅ Predicción con Gemini operativa |
 | **i18n** | ✅ Español e Inglés |
